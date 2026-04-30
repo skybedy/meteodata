@@ -15,6 +15,8 @@
   - renderuje PNG frame do `frames/march_2026/`,
   - skládá MP4 do `output/canary_sst_march_2026.mp4` přes `ffmpeg`.
 - Workflow je navržen tak, aby při chybějících denních souborech pokračoval a vypsal missing seznam místo pádu.
+- Skládání videa používá v `ffmpeg` glob pattern pro soubory `frame_*.png` a pad filtr na sudé rozměry, aby bylo kompatibilní s `libx264`.
+- První funkční animace za březen 2026 byla úspěšně vyrenderována z 31 NOAA denních souborů do `output/canary_sst_march_2026.mp4`.
 
 ## Použité technologie
 
@@ -31,6 +33,8 @@
 - Použití NOAA naming patternu (`oisst-avhrr-v02r01.YYYYMMDD.nc`) umožňuje přímočaré mapování dne na vstupní soubor.
 - Tolerantní chování při chybějících souborech zjednodušuje první iteraci workflow i průběžné testování.
 - Zachování dosavadního stylu mapy (rozsah, colormap, tmavá maska pevniny, bicubic interpolace) drží vizuální kontinuitu výstupů.
+- Glob pattern a padding v `ffmpeg` jsou jednodušší a robustnější než spoléhat na date-format placeholder jako vstup image sekvence.
+- Nejpraktičtější další iterace už není stabilita workflow, ale vizuální kvalita a případná vhodnost výstupu pro Facebook Reel.
 
 ## Otevřené otázky
 

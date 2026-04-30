@@ -68,13 +68,18 @@ def render_frame(input_path: Path, output_path: Path, day: date) -> None:
 
 
 def compose_video(frames_dir: Path, output_mp4: Path, fps: int) -> None:
+    frame_glob = str(frames_dir / "frame_*.png")
     cmd = [
         "ffmpeg",
         "-y",
         "-framerate",
         str(fps),
+        "-pattern_type",
+        "glob",
         "-i",
-        str(frames_dir / "frame_%Y-%m-%d.png"),
+        frame_glob,
+        "-vf",
+        "pad=ceil(iw/2)*2:ceil(ih/2)*2",
         "-c:v",
         "libx264",
         "-pix_fmt",

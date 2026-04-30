@@ -1,5 +1,7 @@
 data/*.nc
+data/**/*.nc
 output/
 frames/
 __pycache__/
 .venv/
+.codex

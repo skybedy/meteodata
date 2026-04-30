@@ -4,7 +4,9 @@
 
 - [ ] Doplnit `README.md` se skutečným návodem ke spuštění projektu
 - [x] Připravit workflow pro rendery více dní a složení MP4 animace za březen 2026
-- [ ] Ověřit workflow s reálnými NOAA denními soubory za celé období `2026-03-01` až `2026-03-31`
+- [x] Ověřit workflow s reálnými NOAA denními soubory za celé období `2026-03-01` až `2026-03-31`
+- [ ] Připravit skript nebo návod na získání denních NOAA souborů do `data/daily/`
+- [ ] Rozhodnout, jak moc chceme jít za vizuální podobností s referenčním FB reelem
 
 ## Další kroky
 
@@ -15,6 +17,7 @@
 - [ ] Zvážit přesun konfigurace rozsahu mapy a názvu výstupu mimo natvrdo zadané konstanty
 - [ ] Zvážit přidání mapových vrstev přes `cartopy` nebo jiný zdroj pobřeží a ostrovů
 - [ ] Rozhodnout, zda na vizuálně podobnou FB animaci stačí OISST, nebo je potřeba jemnější dataset
+- [ ] Zvážit změnu layoutu videa pro Facebook Reel formát
 
 ## Později
 
