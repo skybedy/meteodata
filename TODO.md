@@ -1,11 +1,10 @@
 # TODO.md
 
-## Teď
+## Teď (Plán na zítra)
 
-- [ ] Doplnit `README.md` se skutečným návodem ke spuštění projektu
-- [x] Zobecnit skripty pro animaci, aby fungovaly pro libovolný měsíc nebo časový úsek (např. --month 2026-04 nebo --start-date)
-- [x] Přidat automatické stahování chybějících NOAA dat ze serveru (přepínač --download)
-- [ ] Rozhodnout, jak moc chceme jít za vizuální podobností s referenčním FB reelem
+- [ ] Vytvořit bezplatný účet na portálu Copernicus Marine Service
+- [ ] Zprovoznit autentizaci pro stahování dat (přes modul `copernicusmarine`)
+- [ ] Doprogramovat automatické stahování (přepínač `--download`) do `make_animation_copernicus.py`
 
 ## Další kroky
 
