@@ -21,6 +21,8 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 - Skládání MP4 z frame bylo lokálně ověřeno přes `ffmpeg` na testovacím frame se jménem ve formátu `frame_YYYY-MM-DD.png`.
 - End-to-end workflow pro `2026-03-01` až `2026-03-31` bylo lokálně ověřeno nad 31 NOAA denními soubory v `data/daily/`.
 - Vznikl výstup `output/canary_sst_march_2026.mp4` a 31 frame v `frames/march_2026/`.
+- Do renderu byla doplněna přibližná ručně kreslená vrstva hlavních Kanárských ostrovů, aby byly v animaci viditelné i bez GIS knihoven.
+- Výchozí FPS animace je `3`, takže 31 denních frame dává video dlouhé přibližně `10.33 s`.
 
 ## Používaný stack
 
@@ -79,8 +81,8 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 
 - Skript pro animaci očekává konkrétní NOAA naming pattern denních souborů.
 - Bez lokálních denních `.nc` souborů za březen 2026 se nevyrenderují framy a MP4 se přeskočí.
-- Plný end-to-end běh za celé období `2026-03-01` až `2026-03-31` zatím nebyl ověřen, protože ve stromu nejsou denní NOAA soubory v `data/daily/`.
-- Aktuální vizuální kvalita je pořád výrazně jednodušší než referenční FB reel, hlavně kvůli hrubému rozlišení OISST a chybějícím mapovým vrstvám ostrovů a pobřeží.
+- Aktuální vizuální kvalita je pořád výrazně jednodušší než referenční FB reel, hlavně kvůli hrubému rozlišení OISST a chybějícím přesným GIS mapovým vrstvám.
+- Vrstva Kanárských ostrovů je zatím ručně kreslená aproximace pomocí elips, ne přesná pobřežní geometrie.
 - Není k dispozici README ani formální dokumentace spuštění.
 - Není k dispozici test suite.
 - `matplotlib` může v některých prostředích hlásit ne zapisovatelný defaultní config adresář.
@@ -90,6 +92,6 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 
 - Při navazování vždy nejdřív zkontrolovat `git status`.
 - Nepředpokládat nic ze starých chatů; brát jako zdroj pravdy jen tento repozitář.
-- Ověřený výstup animace má `31` frame, délku přibližně `2.58 s`, rozlišení `1424x1104` a `12 fps`.
+- Ověřený výstup animace má `31` frame, délku přibližně `10.33 s`, rozlišení `1424x1104` a `3 fps`.
 - Pokud se změní způsob spuštění, testování nebo struktura projektu, aktualizovat tento soubor.
 - Pokud přibudou důležitá technická rozhodnutí, zapsat je do `DECISIONS.md`.

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
 import numpy as np
 import xarray as xr
 
@@ -12,10 +13,36 @@ TITLE_DATE = "2024-03-01"
 LAT_MIN, LAT_MAX = 24, 32
 LON_MIN, LON_MAX = 340, 350
 VMIN, VMAX = 16, 20.5
+CANARY_ISLANDS = [
+    (-17.88, 28.68, 0.22, 0.38, -20),  # La Palma
+    (-18.02, 27.73, 0.20, 0.18, -10),  # El Hierro
+    (-17.23, 28.10, 0.20, 0.18, 5),  # La Gomera
+    (-16.63, 28.28, 0.72, 0.26, 12),  # Tenerife
+    (-15.58, 27.96, 0.34, 0.28, -5),  # Gran Canaria
+    (-14.02, 28.36, 0.30, 0.78, -15),  # Fuerteventura
+    (-13.63, 29.04, 0.27, 0.55, -20),  # Lanzarote
+    (-13.51, 29.25, 0.14, 0.08, -15),  # La Graciosa
+]
 
 
 def to_west_longitudes(lon: xr.DataArray) -> np.ndarray:
     return ((lon.to_numpy() + 180) % 360) - 180
+
+
+def draw_canary_islands(ax: plt.Axes) -> None:
+    for lon, lat, width, height, angle in CANARY_ISLANDS:
+        ax.add_patch(
+            Ellipse(
+                (lon, lat),
+                width=width,
+                height=height,
+                angle=angle,
+                facecolor="#303030",
+                edgecolor="#f5f0e6",
+                linewidth=0.7,
+                zorder=4,
+            )
+        )
 
 
 def main() -> None:
@@ -63,6 +90,7 @@ def main() -> None:
     ax.grid(color="#6f6f6f", linestyle="--", linewidth=0.5, alpha=0.35)
     ax.set_xlim(lon_west.min(), lon_west.max())
     ax.set_ylim(lat.min(), lat.max())
+    draw_canary_islands(ax)
 
     cbar = fig.colorbar(im, ax=ax, extend="both", fraction=0.046, pad=0.04)
     cbar.set_label("Sea surface temperature (°C)")

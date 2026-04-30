@@ -17,6 +17,8 @@
 - Workflow je navržen tak, aby při chybějících denních souborech pokračoval a vypsal missing seznam místo pádu.
 - Skládání videa používá v `ffmpeg` glob pattern pro soubory `frame_*.png` a pad filtr na sudé rozměry, aby bylo kompatibilní s `libx264`.
 - První funkční animace za březen 2026 byla úspěšně vyrenderována z 31 NOAA denních souborů do `output/canary_sst_march_2026.mp4`.
+- Výchozí FPS animace bylo sníženo na `3`, aby 31 denních frame vytvořilo zhruba desetisekundové video.
+- Do renderu byla doplněna přibližná ručně kreslená vrstva Kanárských ostrovů jako dočasné řešení bez nové GIS závislosti.
 
 ## Použité technologie
 
@@ -35,6 +37,7 @@
 - Zachování dosavadního stylu mapy (rozsah, colormap, tmavá maska pevniny, bicubic interpolace) drží vizuální kontinuitu výstupů.
 - Glob pattern a padding v `ffmpeg` jsou jednodušší a robustnější než spoléhat na date-format placeholder jako vstup image sekvence.
 - Nejpraktičtější další iterace už není stabilita workflow, ale vizuální kvalita a případná vhodnost výstupu pro Facebook Reel.
+- Ručně kreslené ostrovy rychle řeší čitelnost prototypu, ale pro veřejně publikovatelný výstup bude lepší přesná pobřežní geometrie.
 
 ## Otevřené otázky
 
