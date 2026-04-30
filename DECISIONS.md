@@ -6,11 +6,15 @@
 
 ## Důležitá technická rozhodnutí
 
-- Projekt je aktuálně veden jako jednoduchý Python skript bez zavádění dalšího frameworku.
+- Projekt je aktuálně veden jako jednoduché Python skripty bez zavádění dalšího frameworku.
 - Závislosti jsou aktuálně spravované přes `requirements.txt`.
 - Vstupní NetCDF data nejsou součástí repozitáře a očekávají se lokálně v `data/`.
-- Vstupní NOAA OISST soubor se v projektu používá pod lokálním názvem `data/oisst.nc`, i když stažený originál může mít jiný NOAA název.
-- Aktuální render používá převedené longitude do západních hodnot `-20 .. -10`, tmavou masku pevniny a jemnější interpolaci, aby byl výstup čitelnější i bez dalších mapových knihoven.
+- Původní jednorázový render zůstává v `render_oisst.py` se vstupem `data/oisst.nc`.
+- Pro první použitelný workflow animace za březen 2026 byl přidán samostatný skript `make_march_2026_animation.py`, který:
+  - načítá NOAA OISST denní soubory po jednotlivých dnech,
+  - renderuje PNG frame do `frames/march_2026/`,
+  - skládá MP4 do `output/canary_sst_march_2026.mp4` přes `ffmpeg`.
+- Workflow je navržen tak, aby při chybějících denních souborech pokračoval a vypsal missing seznam místo pádu.
 
 ## Použité technologie
 
@@ -19,19 +23,19 @@
 - `netCDF4`
 - `numpy`
 - `matplotlib`
+- systémový `ffmpeg`
 
 ## Důvody důležitých voleb
 
-- Jednoduchá skriptová forma odpovídá současnému malému rozsahu projektu.
-- `requirements.txt` je pro aktuální rozsah projektu nejjednodušší a dostatečný způsob evidence závislostí.
-- Ignorování vstupních dat a výstupů v Gitu odpovídá tomu, že jde o generované nebo objemné soubory.
-- Stabilní lokální název `data/oisst.nc` zjednodušuje skript i onboarding bez nutnosti hned zavádět CLI parametry.
-- Současný projekt zůstává bez nových těžších závislostí, dokud nebude rozhodnuto, zda chceme jít cestou rychlé OISST animace, nebo přesnější mapové vizualizace.
+- Samostatný skript pro animaci je nejjednodušší praktický krok bez velkého refaktoru existujícího jednorázového rendereru.
+- Použití NOAA naming patternu (`oisst-avhrr-v02r01.YYYYMMDD.nc`) umožňuje přímočaré mapování dne na vstupní soubor.
+- Tolerantní chování při chybějících souborech zjednodušuje první iteraci workflow i průběžné testování.
+- Zachování dosavadního stylu mapy (rozsah, colormap, tmavá maska pevniny, bicubic interpolace) drží vizuální kontinuitu výstupů.
 
 ## Otevřené otázky
 
 - Zda má skript zůstat jednoduchý jednorázový nástroj, nebo se rozšířit do plnohodnotnější CLI aplikace.
-- Zda parametrizovat vstup, výstup, datum a geografický výřez.
+- Zda sjednotit oba skripty (`render_oisst.py` a `make_march_2026_animation.py`) pod jednu CLI entrypoint vrstvu.
 - Zda přidat formální testy a dokumentaci spuštění.
 - Zda pro animaci března 2026 použít přímo NOAA OISST, nebo hledat jemnější dataset bližší vzhledu referenčního FB reelu.
 
