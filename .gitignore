@@ -1,4 +1,5 @@
 data/*.nc
 output/
+frames/
 __pycache__/
 .venv/
