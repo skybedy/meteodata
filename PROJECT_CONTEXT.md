@@ -21,7 +21,7 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 - Skládání MP4 z frame bylo lokálně ověřeno přes `ffmpeg` na testovacím frame se jménem ve formátu `frame_YYYY-MM-DD.png`.
 - End-to-end workflow pro `2026-03-01` až `2026-03-31` bylo lokálně ověřeno nad 31 NOAA denními soubory v `data/daily/`.
 - Vznikl výstup `output/canary_sst_march_2026.mp4` a 31 frame v `frames/march_2026/`.
-- Do renderu byla doplněna přibližná ručně kreslená vrstva hlavních Kanárských ostrovů, aby byly v animaci viditelné i bez GIS knihoven.
+- Render běží přes `cartopy` s Natural Earth `10m` GIS vrstvami (`land` + `coastline`), takže Kanárské ostrovy i pobřeží Afriky mají korektní geometrii.
 - Výchozí FPS animace je `3`, takže 31 denních frame dává video dlouhé přibližně `10.33 s`.
 
 ## Používaný stack
@@ -31,6 +31,7 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 - `netCDF4`
 - `numpy`
 - `matplotlib`
+- `cartopy`
 - systémový `ffmpeg`
 
 ## Hlavní adresáře a soubory
@@ -40,6 +41,7 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 - `requirements.txt` - Python závislosti
 - `.gitignore` - ignoruje `data/*.nc`, `output/`, `frames/`, `__pycache__/`, `.venv/`
 - `data/` - lokální vstupní NetCDF soubory, nejsou verzované
+- `data/cartopy/` - lokální cache GIS podkladů (Natural Earth), stahuje se automaticky při prvním renderu
 - `frames/` - generované framy, není verzované
 - `output/` - generované výstupy, není verzované
 
@@ -81,12 +83,11 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 
 - Skript pro animaci očekává konkrétní NOAA naming pattern denních souborů.
 - Bez lokálních denních `.nc` souborů za březen 2026 se nevyrenderují framy a MP4 se přeskočí.
-- Aktuální vizuální kvalita je pořád výrazně jednodušší než referenční FB reel, hlavně kvůli hrubému rozlišení OISST a chybějícím přesným GIS mapovým vrstvám.
-- Vrstva Kanárských ostrovů je zatím ručně kreslená aproximace pomocí elips, ne přesná pobřežní geometrie.
+- Aktuální vizuální kvalita je pořád jednodušší než referenční FB reel hlavně kvůli hrubému rozlišení OISST `0.25°`.
 - Není k dispozici README ani formální dokumentace spuštění.
 - Není k dispozici test suite.
 - `matplotlib` může v některých prostředích hlásit ne zapisovatelný defaultní config adresář.
-- NOAA OISST používá hrubé rozlišení `0.25°`, takže pro jemnější vizuální výsledek podobný FB reelu bude pravděpodobně potřeba detailnější dataset nebo doplnění mapových vrstev.
+- Při prvním běhu `cartopy` stahuje Natural Earth data; bez síťového přístupu je potřeba mít `data/cartopy/` už připravené.
 
 ## Poznámky pro další navázání
 

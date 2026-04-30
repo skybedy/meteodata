@@ -1,7 +1,9 @@
 from pathlib import Path
 
+import cartopy
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
 import numpy as np
 import xarray as xr
 
@@ -13,36 +15,11 @@ TITLE_DATE = "2024-03-01"
 LAT_MIN, LAT_MAX = 24, 32
 LON_MIN, LON_MAX = 340, 350
 VMIN, VMAX = 16, 20.5
-CANARY_ISLANDS = [
-    (-17.88, 28.68, 0.22, 0.38, -20),  # La Palma
-    (-18.02, 27.73, 0.20, 0.18, -10),  # El Hierro
-    (-17.23, 28.10, 0.20, 0.18, 5),  # La Gomera
-    (-16.63, 28.28, 0.72, 0.26, 12),  # Tenerife
-    (-15.58, 27.96, 0.34, 0.28, -5),  # Gran Canaria
-    (-14.02, 28.36, 0.30, 0.78, -15),  # Fuerteventura
-    (-13.63, 29.04, 0.27, 0.55, -20),  # Lanzarote
-    (-13.51, 29.25, 0.14, 0.08, -15),  # La Graciosa
-]
+CARTOPY_DATA_DIR = Path("data/cartopy")
 
 
 def to_west_longitudes(lon: xr.DataArray) -> np.ndarray:
     return ((lon.to_numpy() + 180) % 360) - 180
-
-
-def draw_canary_islands(ax: plt.Axes) -> None:
-    for lon, lat, width, height, angle in CANARY_ISLANDS:
-        ax.add_patch(
-            Ellipse(
-                (lon, lat),
-                width=width,
-                height=height,
-                angle=angle,
-                facecolor="#303030",
-                edgecolor="#f5f0e6",
-                linewidth=0.7,
-                zorder=4,
-            )
-        )
 
 
 def main() -> None:
@@ -68,29 +45,47 @@ def main() -> None:
     print(f"mean °C: {float(sst_canary.mean().values):.3f}")
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    CARTOPY_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    cartopy.config["data_dir"] = str(CARTOPY_DATA_DIR.resolve())
 
     cmap = plt.get_cmap("RdYlBu_r").copy()
     cmap.set_bad("#303030")
 
-    fig, ax = plt.subplots(figsize=(9, 7), dpi=160)
+    fig = plt.figure(figsize=(9, 7), dpi=160)
+    ax = plt.axes(projection=ccrs.PlateCarree())
     ax.set_facecolor("#303030")
-    im = ax.imshow(
+    im = ax.pcolormesh(
+        lon_west,
+        lat,
         values,
-        extent=[lon_west.min(), lon_west.max(), lat.min(), lat.max()],
-        origin="lower",
+        transform=ccrs.PlateCarree(),
         cmap=cmap,
         vmin=VMIN,
         vmax=VMAX,
-        interpolation="bicubic",
-        aspect="auto",
+        shading="auto",
     )
+    land = cfeature.NaturalEarthFeature(
+        "physical",
+        "land",
+        "10m",
+        facecolor="#303030",
+        edgecolor="#f5f0e6",
+    )
+    ax.add_feature(land, linewidth=0.55, zorder=3)
+    ax.add_feature(cfeature.COASTLINE.with_scale("10m"), linewidth=0.35, edgecolor="#f5f0e6", zorder=4)
+
     ax.set_title(f"Sea Surface Temperature - Canary Islands - {TITLE_DATE}", pad=12)
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
-    ax.grid(color="#6f6f6f", linestyle="--", linewidth=0.5, alpha=0.35)
-    ax.set_xlim(lon_west.min(), lon_west.max())
-    ax.set_ylim(lat.min(), lat.max())
-    draw_canary_islands(ax)
+    ax.gridlines(
+        crs=ccrs.PlateCarree(),
+        draw_labels=False,
+        linewidth=0.45,
+        color="#6f6f6f",
+        linestyle="--",
+        alpha=0.35,
+    )
+    ax.set_extent([float(lon_west.min()), float(lon_west.max()), float(lat.min()), float(lat.max())], ccrs.PlateCarree())
 
     cbar = fig.colorbar(im, ax=ax, extend="both", fraction=0.046, pad=0.04)
     cbar.set_label("Sea surface temperature (°C)")

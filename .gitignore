@@ -1,5 +1,6 @@
 data/*.nc
 data/**/*.nc
+data/cartopy/
 output/
 frames/
 __pycache__/

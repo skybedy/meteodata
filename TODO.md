@@ -8,7 +8,7 @@
 - [ ] Připravit skript nebo návod na získání denních NOAA souborů do `data/daily/`
 - [ ] Rozhodnout, jak moc chceme jít za vizuální podobností s referenčním FB reelem
 - [x] Zpomalit výsledné video, aby netrvalo jen zhruba dvě sekundy
-- [x] Doplnit aspoň přibližnou vrstvu Kanárských ostrovů do renderu
+- [x] Přepnout render na GIS vrstvy pobřeží a ostrovů přes `cartopy`
 
 ## Další kroky
 
@@ -20,7 +20,7 @@
 - [ ] Zvážit přidání mapových vrstev přes `cartopy` nebo jiný zdroj pobřeží a ostrovů
 - [ ] Rozhodnout, zda na vizuálně podobnou FB animaci stačí OISST, nebo je potřeba jemnější dataset
 - [ ] Zvážit změnu layoutu videa pro Facebook Reel formát
-- [ ] Nahradit ručně kreslené ostrovy přesnější geometrií, pokud má výstup sloužit veřejné publikaci
+- [ ] Doladit styling mapy (labely, grid, colormap) pro publikační verzi na Facebook
 
 ## Později
 
