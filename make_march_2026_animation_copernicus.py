@@ -13,13 +13,13 @@ import numpy as np
 import xarray as xr
 
 LAT_MIN, LAT_MAX = 24, 32
-LON_MIN, LON_MAX = 340, 350
+LON_MIN, LON_MAX = -20, -10
 VMIN, VMAX = 16, 20.5
 CARTOPY_DATA_DIR = Path("data/cartopy")
 
-
-def to_west_longitudes(lon: xr.DataArray) -> np.ndarray:
-    return ((lon.to_numpy() + 180) % 360) - 180
+SST_CANDIDATES = ("analysed_sst", "thetao", "sst")
+LAT_CANDIDATES = ("latitude", "lat")
+LON_CANDIDATES = ("longitude", "lon")
 
 
 def march_dates_2026() -> list[date]:
@@ -27,40 +27,61 @@ def march_dates_2026() -> list[date]:
     return [start + timedelta(days=offset) for offset in range(31)]
 
 
-def expected_daily_filename(day: date) -> str:
-    # NOAA naming convention for daily OISST files.
-    return f"oisst-avhrr-v02r01.{day:%Y%m%d}.nc"
+def select_existing_name(names: tuple[str, ...], available: list[str], label: str) -> str:
+    for name in names:
+        if name in available:
+            return name
+    raise KeyError(f"No supported {label} found. Supported names: {names}; available: {available}")
 
 
 def fill_nearshore_gaps(sst_subset: xr.DataArray) -> xr.DataArray:
-    """
-    Fill small coastal/mask gaps by nearest-neighbour interpolation
-    along both lon and lat directions.
-    """
-    filled = sst_subset.interpolate_na(dim="lon", method="nearest", fill_value="extrapolate")
-    filled = filled.interpolate_na(dim="lat", method="nearest", fill_value="extrapolate")
+    filled = sst_subset.interpolate_na(dim="longitude", method="nearest", fill_value="extrapolate")
+    filled = filled.interpolate_na(dim="latitude", method="nearest", fill_value="extrapolate")
     return filled
 
 
 def upscale_grid(sst_subset: xr.DataArray, factor: int) -> xr.DataArray:
     if factor <= 1:
         return sst_subset
+    lat_new = np.linspace(
+        float(sst_subset.latitude.min()),
+        float(sst_subset.latitude.max()),
+        sst_subset.sizes["latitude"] * factor,
+    )
+    lon_new = np.linspace(
+        float(sst_subset.longitude.min()),
+        float(sst_subset.longitude.max()),
+        sst_subset.sizes["longitude"] * factor,
+    )
+    return sst_subset.interp(latitude=lat_new, longitude=lon_new, method="linear")
 
-    lat_new = np.linspace(float(sst_subset.lat.min()), float(sst_subset.lat.max()), sst_subset.sizes["lat"] * factor)
-    lon_new = np.linspace(float(sst_subset.lon.min()), float(sst_subset.lon.max()), sst_subset.sizes["lon"] * factor)
-    return sst_subset.interp(lat=lat_new, lon=lon_new, method="linear")
+
+def open_sst_subset(input_path: Path) -> xr.DataArray:
+    with xr.open_dataset(input_path) as ds:
+        var_name = select_existing_name(SST_CANDIDATES, list(ds.data_vars), "SST variable")
+        lat_name = select_existing_name(LAT_CANDIDATES, list(ds.coords), "latitude coordinate")
+        lon_name = select_existing_name(LON_CANDIDATES, list(ds.coords), "longitude coordinate")
+
+        field = ds[var_name]
+        for dim in ("time", "depth", "zlev"):
+            if dim in field.dims:
+                field = field.isel({dim: 0})
+
+        sst = field.rename({lat_name: "latitude", lon_name: "longitude"})
+        if float(sst.longitude.max()) > 180:
+            sst = sst.assign_coords(longitude=((sst.longitude + 180) % 360) - 180).sortby("longitude")
+
+        return sst.sel(latitude=slice(LAT_MIN, LAT_MAX), longitude=slice(LON_MIN, LON_MAX)).load()
 
 
 def render_frame(input_path: Path, output_path: Path, day: date, upscale_factor: int) -> None:
-    with xr.open_dataset(input_path) as ds:
-        sst = ds["sst"].isel(time=0, zlev=0)
-        sst_canary = sst.sel(lat=slice(LAT_MIN, LAT_MAX), lon=slice(LON_MIN, LON_MAX))
-        sst_filled = fill_nearshore_gaps(sst_canary)
-        sst_render = upscale_grid(sst_filled, upscale_factor)
+    sst_subset = open_sst_subset(input_path)
+    sst_filled = fill_nearshore_gaps(sst_subset)
+    sst_render = upscale_grid(sst_filled, upscale_factor)
 
-        lon_west = to_west_longitudes(sst_render.lon)
-        lat = sst_render.lat.to_numpy()
-        values = np.ma.masked_invalid(sst_render.to_numpy())
+    lon = sst_render.longitude.to_numpy()
+    lat = sst_render.latitude.to_numpy()
+    values = np.ma.masked_invalid(sst_render.to_numpy())
 
     cmap = plt.get_cmap("RdYlBu_r").copy()
     cmap.set_bad("#303030")
@@ -69,7 +90,7 @@ def render_frame(input_path: Path, output_path: Path, day: date, upscale_factor:
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.set_facecolor("#303030")
     im = ax.pcolormesh(
-        lon_west,
+        lon,
         lat,
         values,
         transform=ccrs.PlateCarree(),
@@ -88,7 +109,6 @@ def render_frame(input_path: Path, output_path: Path, day: date, upscale_factor:
     )
     ax.add_feature(land, linewidth=0.55, zorder=3)
     ax.add_feature(cfeature.COASTLINE.with_scale("10m"), linewidth=0.35, edgecolor="#f5f0e6", zorder=4)
-
     ax.set_title(f"Sea Surface Temperature - Canary Islands - {day:%Y-%m-%d}", pad=12)
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
@@ -100,18 +120,16 @@ def render_frame(input_path: Path, output_path: Path, day: date, upscale_factor:
         linestyle="--",
         alpha=0.35,
     )
-    ax.set_extent([float(lon_west.min()), float(lon_west.max()), float(lat.min()), float(lat.max())], ccrs.PlateCarree())
+    ax.set_extent([float(lon.min()), float(lon.max()), float(lat.min()), float(lat.max())], ccrs.PlateCarree())
 
     cbar = fig.colorbar(im, ax=ax, extend="both", fraction=0.046, pad=0.04)
     cbar.set_label("Sea surface temperature (°C)")
-
     fig.tight_layout()
     fig.savefig(output_path, bbox_inches="tight")
     plt.close(fig)
 
 
 def compose_video(frames_dir: Path, output_mp4: Path, fps: int) -> None:
-    frame_glob = str(frames_dir / "frame_*.png")
     cmd = [
         "ffmpeg",
         "-y",
@@ -120,7 +138,7 @@ def compose_video(frames_dir: Path, output_mp4: Path, fps: int) -> None:
         "-pattern_type",
         "glob",
         "-i",
-        frame_glob,
+        str(frames_dir / "frame_*.png"),
         "-vf",
         "pad=ceil(iw/2)*2:ceil(ih/2)*2",
         "-c:v",
@@ -133,32 +151,27 @@ def compose_video(frames_dir: Path, output_mp4: Path, fps: int) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Render daily SST frames for March 2026 from NOAA OISST daily NetCDF files and compose MP4."
-        )
+    parser = argparse.ArgumentParser(description="Render March 2026 SST animation from Copernicus daily NetCDF files.")
+    parser.add_argument("--daily-dir", type=Path, default=Path("data/copernicus/daily"))
+    parser.add_argument(
+        "--filename-template",
+        type=str,
+        default="copernicus_sst_{date}.nc",
+        help="Template using {date} placeholder in YYYYMMDD format.",
     )
-    parser.add_argument("--daily-dir", type=Path, default=Path("data/daily"))
-    parser.add_argument("--frames-dir", type=Path, default=Path("frames/march_2026"))
-    parser.add_argument("--output-mp4", type=Path, default=Path("output/canary_sst_march_2026.mp4"))
+    parser.add_argument("--frames-dir", type=Path, default=Path("frames/march_2026_copernicus"))
+    parser.add_argument("--output-mp4", type=Path, default=Path("output/canary_sst_march_2026_copernicus.mp4"))
     parser.add_argument("--fps", type=int, default=3)
-    parser.add_argument(
-        "--upscale-factor",
-        type=int,
-        default=4,
-        help="Upscale SST grid before rendering (1 disables upscaling).",
-    )
-    parser.add_argument(
-        "--clean-frames",
-        action="store_true",
-        help="Delete existing frame_*.png files in frames dir before rendering.",
-    )
+    parser.add_argument("--upscale-factor", type=int, default=2)
+    parser.add_argument("--clean-frames", action="store_true")
     args = parser.parse_args()
 
     if args.fps <= 0:
         raise ValueError("--fps must be greater than 0.")
     if args.upscale_factor <= 0:
         raise ValueError("--upscale-factor must be greater than 0.")
+    if "{date}" not in args.filename_template:
+        raise ValueError("--filename-template must include {date}.")
 
     args.frames_dir.mkdir(parents=True, exist_ok=True)
     args.output_mp4.parent.mkdir(parents=True, exist_ok=True)
@@ -169,32 +182,27 @@ def main() -> None:
         for old_frame in sorted(args.frames_dir.glob("frame_*.png")):
             old_frame.unlink()
 
-    missing_files: list[Path] = []
     rendered = 0
-
+    missing: list[Path] = []
     for day in march_dates_2026():
-        daily_file = args.daily_dir / expected_daily_filename(day)
+        filename = args.filename_template.format(date=f"{day:%Y%m%d}")
+        daily_file = args.daily_dir / filename
         frame_path = args.frames_dir / f"frame_{day:%Y-%m-%d}.png"
-
         if not daily_file.exists():
-            missing_files.append(daily_file)
+            missing.append(daily_file)
             continue
-
-        print(f"Rendering {day:%Y-%m-%d} from {daily_file} -> {frame_path}")
+        print(f"Rendering {day:%Y-%m-%d}: {daily_file}")
         render_frame(daily_file, frame_path, day, args.upscale_factor)
         rendered += 1
 
     print(f"Rendered frames: {rendered}")
-
-    if missing_files:
+    if missing:
         print("Missing daily files:")
-        for path in missing_files:
+        for path in missing:
             print(f"  - {path}")
-
     if rendered == 0:
         print("No frames were rendered, skipping MP4 composition.")
         return
-
     compose_video(args.frames_dir, args.output_mp4, args.fps)
     print(f"Animation created: {args.output_mp4}")
 

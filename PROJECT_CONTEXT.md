@@ -11,6 +11,10 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
   - očekává NOAA OISST denní soubory v `data/daily/`
   - vyrenderuje denní frame PNG do `frames/march_2026/`
   - složí MP4 do `output/canary_sst_march_2026.mp4` přes `ffmpeg`
+  - podporuje `--clean-frames` pro smazání starých frame před novým během
+  - validuje `--fps > 0`
+  - podporuje `--upscale-factor` (výchozí `4`) pro jemnější vykreslení SST mřížky
+  - při renderu doplňuje malé pobřežní/maskované mezery v SST přes nearest interpolaci, aby nevznikaly černé „díry“ v moři
 - Závislosti jsou definované v `requirements.txt`.
 - V repozitáři není `README.md`.
 - V repozitáři není test suite.
@@ -18,6 +22,12 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 - Výstupní obrázky a framy se ukládají do `output/` a `frames/`, které jsou ignorované v Gitu.
 - `ffmpeg` je v systému dostupný.
 - NOAA OISST 0.25° je funkční pro první verzi animace, ale pro vzhled blízký referenčnímu FB reelu je dataset hrubý.
+- Upscale v renderu zlepšuje vizuální plynulost, ale nepřidává novou fyzikální informaci; pro výrazně vyšší kvalitu je další krok jemnější dataset (např. Copernicus Marine).
+- Nově je přidán i první paralelní skript `make_march_2026_animation_copernicus.py` pro stejný výstupní workflow (daily frame + MP4) nad jemnějším zdrojem dat:
+  - očekává denní Copernicus `.nc` soubory v `data/copernicus/daily/`,
+  - podporuje konfigurovatelný naming přes `--filename-template` s placeholderem `{date}`,
+  - umí autodetekci běžných názvů proměnných/souřadnic (`analysed_sst`/`thetao`/`sst`, `latitude|lat`, `longitude|lon`),
+  - obsahuje stejné kroky jako OISST workflow: nearshore fill, volitelný upscale, `--clean-frames`, MP4 přes `ffmpeg`.
 - Skládání MP4 z frame bylo lokálně ověřeno přes `ffmpeg` na testovacím frame se jménem ve formátu `frame_YYYY-MM-DD.png`.
 - End-to-end workflow pro `2026-03-01` až `2026-03-31` bylo lokálně ověřeno nad 31 NOAA denními soubory v `data/daily/`.
 - Vznikl výstup `output/canary_sst_march_2026.mp4` a 31 frame v `frames/march_2026/`.
@@ -38,6 +48,7 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 
 - `render_oisst.py` - jednorázový PNG render z `data/oisst.nc`
 - `make_march_2026_animation.py` - dávkový render frame pro březen 2026 + složení MP4
+- `make_march_2026_animation_copernicus.py` - první varianta stejného workflow pro Copernicus data
 - `requirements.txt` - Python závislosti
 - `.gitignore` - ignoruje `data/*.nc`, `output/`, `frames/`, `__pycache__/`, `.venv/`
 - `data/` - lokální vstupní NetCDF soubory, nejsou verzované
