@@ -7,10 +7,11 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 ## Aktuální stav
 
 - Projekt obsahuje původní skript `render_oisst.py` pro jednorázový PNG render ze souboru `data/oisst.nc`.
-- Nově je přidán skript `make_march_2026_animation.py` pro první použitelný workflow animace:
-  - očekává NOAA OISST denní soubory v `data/daily/`
-  - vyrenderuje denní frame PNG do `frames/march_2026/`
-  - složí MP4 do `output/canary_sst_march_2026.mp4` přes `ffmpeg`
+- Nově je přidán skript `make_animation.py` pro plně dynamický workflow animace:
+  - očekává nebo automaticky stahuje NOAA OISST denní soubory do `data/daily/` pomocí přepínače `--download`
+  - podporuje `--month` nebo `--start-date` a `--end-date` pro volbu časového rozpětí
+  - vyrenderuje denní frame PNG do dynamicky vytvořených složek ve `frames/`
+  - složí MP4 pomocí `ffmpeg` do `output/`
   - podporuje `--clean-frames` pro smazání starých frame před novým během
   - validuje `--fps > 0`
   - podporuje `--upscale-factor` (výchozí `4`) pro jemnější vykreslení SST mřížky
@@ -23,7 +24,8 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 - `ffmpeg` je v systému dostupný.
 - NOAA OISST 0.25° je funkční pro první verzi animace, ale pro vzhled blízký referenčnímu FB reelu je dataset hrubý.
 - Upscale v renderu zlepšuje vizuální plynulost, ale nepřidává novou fyzikální informaci; pro výrazně vyšší kvalitu je další krok jemnější dataset (např. Copernicus Marine).
-- Nově je přidán i první paralelní skript `make_march_2026_animation_copernicus.py` pro stejný výstupní workflow (daily frame + MP4) nad jemnějším zdrojem dat:
+- Nově je přidán i první paralelní skript `make_animation_copernicus.py` pro stejný výstupní workflow (daily frame + MP4) nad jemnějším zdrojem dat:
+  - umí generovat dny dynamicky přes stejné CLI argumenty jako NOAA skript,
   - očekává denní Copernicus `.nc` soubory v `data/copernicus/daily/`,
   - podporuje konfigurovatelný naming přes `--filename-template` s placeholderem `{date}`,
   - umí autodetekci běžných názvů proměnných/souřadnic (`analysed_sst`/`thetao`/`sst`, `latitude|lat`, `longitude|lon`),
@@ -47,8 +49,8 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 ## Hlavní adresáře a soubory
 
 - `render_oisst.py` - jednorázový PNG render z `data/oisst.nc`
-- `make_march_2026_animation.py` - dávkový render frame pro březen 2026 + složení MP4
-- `make_march_2026_animation_copernicus.py` - první varianta stejného workflow pro Copernicus data
+- `make_animation.py` - dávkový render frame pro libovolné datum a NOAA data s podporou automatického stahování
+- `make_animation_copernicus.py` - paralelní varianta stejného workflow pro Copernicus data
 - `requirements.txt` - Python závislosti
 - `.gitignore` - ignoruje `data/*.nc`, `output/`, `frames/`, `__pycache__/`, `.venv/`
 - `data/` - lokální vstupní NetCDF soubory, nejsou verzované
@@ -65,14 +67,12 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python render_oisst.py
-python make_march_2026_animation.py
+python make_animation.py --month 2026-04 --download
 ```
 
-Pro animaci března 2026 skript očekává denní NOAA soubory pojmenované jako:
+Pro animaci z NOAA dat skript očekává denní NOAA soubory pojmenované jako:
 
-- `data/daily/oisst-avhrr-v02r01.20260301.nc`
-- ...
-- `data/daily/oisst-avhrr-v02r01.20260331.nc`
+- `data/daily/oisst-avhrr-v02r01.YYYYMMDD.nc`
 
 Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří jen pokud existuje alespoň jeden vyrenderovaný frame.
 
@@ -80,10 +80,10 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 
 - Automatické testy: nezjištěno
 - Formální test příkaz: zatím není definováno
-- Minimální ověření kódu: `python3 -m py_compile render_oisst.py make_march_2026_animation.py`
-- Smoke test průchodu workflow: `python make_march_2026_animation.py`
+- Minimální ověření kódu: `python3 -m py_compile render_oisst.py make_animation.py`
+- Smoke test průchodu workflow: `python make_animation.py --month 2026-03`
 - Smoke test skládání MP4: ověřeno lokálně přes `ffmpeg` nad testovacím frame exportem
-- End-to-end ověření: `python make_march_2026_animation.py` úspěšně vyrenderoval 31 frame a vytvořil `output/canary_sst_march_2026.mp4`
+- End-to-end ověření: `python make_animation.py --month 2026-03` úspěšně vyrenderoval framy a vytvořil funkční `.mp4` video.
 
 ## Jak projekt buildit
 
@@ -93,7 +93,6 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 ## Známá omezení / problémy
 
 - Skript pro animaci očekává konkrétní NOAA naming pattern denních souborů.
-- Bez lokálních denních `.nc` souborů za březen 2026 se nevyrenderují framy a MP4 se přeskočí.
 - Aktuální vizuální kvalita je pořád jednodušší než referenční FB reel hlavně kvůli hrubému rozlišení OISST `0.25°`.
 - Není k dispozici README ani formální dokumentace spuštění.
 - Není k dispozici test suite.

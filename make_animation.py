@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import calendar
 import subprocess
+import urllib.request
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -16,20 +18,33 @@ LAT_MIN, LAT_MAX = 24, 32
 LON_MIN, LON_MAX = 340, 350
 VMIN, VMAX = 16, 20.5
 CARTOPY_DATA_DIR = Path("data/cartopy")
+NOAA_URL_TEMPLATE = "https://www.ncei.noaa.gov/data/sea-surface-temperature-optimum-interpolation/v2.1/access/avhrr/{year:04d}{month:02d}/oisst-avhrr-v02r01.{year:04d}{month:02d}{day:02d}.nc"
 
 
 def to_west_longitudes(lon: xr.DataArray) -> np.ndarray:
     return ((lon.to_numpy() + 180) % 360) - 180
 
 
-def march_dates_2026() -> list[date]:
-    start = date(2026, 3, 1)
-    return [start + timedelta(days=offset) for offset in range(31)]
+def generate_dates(start_date: date, end_date: date) -> list[date]:
+    delta = end_date - start_date
+    return [start_date + timedelta(days=i) for i in range(delta.days + 1)]
 
 
 def expected_daily_filename(day: date) -> str:
     # NOAA naming convention for daily OISST files.
     return f"oisst-avhrr-v02r01.{day:%Y%m%d}.nc"
+
+
+def download_noaa_file(day: date, dest_path: Path) -> bool:
+    url = NOAA_URL_TEMPLATE.format(year=day.year, month=day.month, day=day.day)
+    try:
+        urllib.request.urlretrieve(url, str(dest_path))
+        return True
+    except Exception as e:
+        print(f"Failed to download {url}: {e}")
+        if dest_path.exists():
+            dest_path.unlink()
+        return False
 
 
 def fill_nearshore_gaps(sst_subset: xr.DataArray) -> xr.DataArray:
@@ -134,13 +149,14 @@ def compose_video(frames_dir: Path, output_mp4: Path, fps: int) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description=(
-            "Render daily SST frames for March 2026 from NOAA OISST daily NetCDF files and compose MP4."
-        )
+        description="Render daily SST frames from NOAA OISST daily NetCDF files and compose MP4."
     )
+    parser.add_argument("--month", type=str, help="Month to render in YYYY-MM format")
+    parser.add_argument("--start-date", type=date.fromisoformat, help="Start date (YYYY-MM-DD)")
+    parser.add_argument("--end-date", type=date.fromisoformat, help="End date (YYYY-MM-DD)")
     parser.add_argument("--daily-dir", type=Path, default=Path("data/daily"))
-    parser.add_argument("--frames-dir", type=Path, default=Path("frames/march_2026"))
-    parser.add_argument("--output-mp4", type=Path, default=Path("output/canary_sst_march_2026.mp4"))
+    parser.add_argument("--frames-dir", type=Path, help="Override default frames dir")
+    parser.add_argument("--output-mp4", type=Path, help="Override default output mp4")
     parser.add_argument("--fps", type=int, default=3)
     parser.add_argument(
         "--upscale-factor",
@@ -153,32 +169,65 @@ def main() -> None:
         action="store_true",
         help="Delete existing frame_*.png files in frames dir before rendering.",
     )
+    parser.add_argument(
+        "--download",
+        action="store_true",
+        help="Automatically download missing NOAA OISST daily NetCDF files.",
+    )
     args = parser.parse_args()
 
     if args.fps <= 0:
-        raise ValueError("--fps must be greater than 0.")
+        parser.error("--fps must be greater than 0.")
     if args.upscale_factor <= 0:
-        raise ValueError("--upscale-factor must be greater than 0.")
+        parser.error("--upscale-factor must be greater than 0.")
 
-    args.frames_dir.mkdir(parents=True, exist_ok=True)
-    args.output_mp4.parent.mkdir(parents=True, exist_ok=True)
+    if args.month:
+        year, month = map(int, args.month.split("-"))
+        start_date = date(year, month, 1)
+        _, last_day = calendar.monthrange(year, month)
+        end_date = date(year, month, last_day)
+        default_frames_dir = Path(f"frames/{start_date:%Y_%m}")
+        default_output_mp4 = Path(f"output/canary_sst_{start_date:%Y_%m}.mp4")
+    elif args.start_date and args.end_date:
+        start_date = args.start_date
+        end_date = args.end_date
+        default_frames_dir = Path(f"frames/{start_date:%Y%m%d}_{end_date:%Y%m%d}")
+        default_output_mp4 = Path(f"output/canary_sst_{start_date:%Y%m%d}_{end_date:%Y%m%d}.mp4")
+    else:
+        parser.error("Either --month or both --start-date and --end-date must be provided.")
+
+    if end_date < start_date:
+        parser.error("--end-date must be after --start-date")
+
+    frames_dir = args.frames_dir or default_frames_dir
+    output_mp4 = args.output_mp4 or default_output_mp4
+
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    output_mp4.parent.mkdir(parents=True, exist_ok=True)
     CARTOPY_DATA_DIR.mkdir(parents=True, exist_ok=True)
     cartopy.config["data_dir"] = str(CARTOPY_DATA_DIR.resolve())
 
     if args.clean_frames:
-        for old_frame in sorted(args.frames_dir.glob("frame_*.png")):
+        for old_frame in sorted(frames_dir.glob("frame_*.png")):
             old_frame.unlink()
 
     missing_files: list[Path] = []
     rendered = 0
 
-    for day in march_dates_2026():
+    for day in generate_dates(start_date, end_date):
         daily_file = args.daily_dir / expected_daily_filename(day)
-        frame_path = args.frames_dir / f"frame_{day:%Y-%m-%d}.png"
+        frame_path = frames_dir / f"frame_{day:%Y-%m-%d}.png"
 
         if not daily_file.exists():
-            missing_files.append(daily_file)
-            continue
+            if args.download:
+                print(f"Downloading missing data for {day:%Y-%m-%d}...")
+                args.daily_dir.mkdir(parents=True, exist_ok=True)
+                if not download_noaa_file(day, daily_file):
+                    missing_files.append(daily_file)
+                    continue
+            else:
+                missing_files.append(daily_file)
+                continue
 
         print(f"Rendering {day:%Y-%m-%d} from {daily_file} -> {frame_path}")
         render_frame(daily_file, frame_path, day, args.upscale_factor)
@@ -195,8 +244,8 @@ def main() -> None:
         print("No frames were rendered, skipping MP4 composition.")
         return
 
-    compose_video(args.frames_dir, args.output_mp4, args.fps)
-    print(f"Animation created: {args.output_mp4}")
+    compose_video(frames_dir, output_mp4, args.fps)
+    print(f"Animation created: {output_mp4}")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import calendar
 import subprocess
 from datetime import date, timedelta
 from pathlib import Path
@@ -22,9 +23,9 @@ LAT_CANDIDATES = ("latitude", "lat")
 LON_CANDIDATES = ("longitude", "lon")
 
 
-def march_dates_2026() -> list[date]:
-    start = date(2026, 3, 1)
-    return [start + timedelta(days=offset) for offset in range(31)]
+def generate_dates(start_date: date, end_date: date) -> list[date]:
+    delta = end_date - start_date
+    return [start_date + timedelta(days=i) for i in range(delta.days + 1)]
 
 
 def select_existing_name(names: tuple[str, ...], available: list[str], label: str) -> str:
@@ -151,7 +152,10 @@ def compose_video(frames_dir: Path, output_mp4: Path, fps: int) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Render March 2026 SST animation from Copernicus daily NetCDF files.")
+    parser = argparse.ArgumentParser(description="Render SST animation from Copernicus daily NetCDF files.")
+    parser.add_argument("--month", type=str, help="Month to render in YYYY-MM format")
+    parser.add_argument("--start-date", type=date.fromisoformat, help="Start date (YYYY-MM-DD)")
+    parser.add_argument("--end-date", type=date.fromisoformat, help="End date (YYYY-MM-DD)")
     parser.add_argument("--daily-dir", type=Path, default=Path("data/copernicus/daily"))
     parser.add_argument(
         "--filename-template",
@@ -159,38 +163,61 @@ def main() -> None:
         default="copernicus_sst_{date}.nc",
         help="Template using {date} placeholder in YYYYMMDD format.",
     )
-    parser.add_argument("--frames-dir", type=Path, default=Path("frames/march_2026_copernicus"))
-    parser.add_argument("--output-mp4", type=Path, default=Path("output/canary_sst_march_2026_copernicus.mp4"))
+    parser.add_argument("--frames-dir", type=Path, help="Override default frames dir")
+    parser.add_argument("--output-mp4", type=Path, help="Override default output mp4")
     parser.add_argument("--fps", type=int, default=3)
     parser.add_argument("--upscale-factor", type=int, default=2)
     parser.add_argument("--clean-frames", action="store_true")
     args = parser.parse_args()
 
     if args.fps <= 0:
-        raise ValueError("--fps must be greater than 0.")
+        parser.error("--fps must be greater than 0.")
     if args.upscale_factor <= 0:
-        raise ValueError("--upscale-factor must be greater than 0.")
+        parser.error("--upscale-factor must be greater than 0.")
     if "{date}" not in args.filename_template:
-        raise ValueError("--filename-template must include {date}.")
+        parser.error("--filename-template must include {date}.")
 
-    args.frames_dir.mkdir(parents=True, exist_ok=True)
-    args.output_mp4.parent.mkdir(parents=True, exist_ok=True)
+    if args.month:
+        year, month = map(int, args.month.split("-"))
+        start_date = date(year, month, 1)
+        _, last_day = calendar.monthrange(year, month)
+        end_date = date(year, month, last_day)
+        default_frames_dir = Path(f"frames/{start_date:%Y_%m}_copernicus")
+        default_output_mp4 = Path(f"output/canary_sst_{start_date:%Y_%m}_copernicus.mp4")
+    elif args.start_date and args.end_date:
+        start_date = args.start_date
+        end_date = args.end_date
+        default_frames_dir = Path(f"frames/{start_date:%Y%m%d}_{end_date:%Y%m%d}_copernicus")
+        default_output_mp4 = Path(f"output/canary_sst_{start_date:%Y%m%d}_{end_date:%Y%m%d}_copernicus.mp4")
+    else:
+        parser.error("Either --month or both --start-date and --end-date must be provided.")
+
+    if end_date < start_date:
+        parser.error("--end-date must be after --start-date")
+
+    frames_dir = args.frames_dir or default_frames_dir
+    output_mp4 = args.output_mp4 or default_output_mp4
+
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    output_mp4.parent.mkdir(parents=True, exist_ok=True)
     CARTOPY_DATA_DIR.mkdir(parents=True, exist_ok=True)
     cartopy.config["data_dir"] = str(CARTOPY_DATA_DIR.resolve())
 
     if args.clean_frames:
-        for old_frame in sorted(args.frames_dir.glob("frame_*.png")):
+        for old_frame in sorted(frames_dir.glob("frame_*.png")):
             old_frame.unlink()
 
     rendered = 0
     missing: list[Path] = []
-    for day in march_dates_2026():
+    for day in generate_dates(start_date, end_date):
         filename = args.filename_template.format(date=f"{day:%Y%m%d}")
         daily_file = args.daily_dir / filename
-        frame_path = args.frames_dir / f"frame_{day:%Y-%m-%d}.png"
+        frame_path = frames_dir / f"frame_{day:%Y-%m-%d}.png"
+        
         if not daily_file.exists():
             missing.append(daily_file)
             continue
+            
         print(f"Rendering {day:%Y-%m-%d}: {daily_file}")
         render_frame(daily_file, frame_path, day, args.upscale_factor)
         rendered += 1
@@ -200,11 +227,13 @@ def main() -> None:
         print("Missing daily files:")
         for path in missing:
             print(f"  - {path}")
+            
     if rendered == 0:
         print("No frames were rendered, skipping MP4 composition.")
         return
-    compose_video(args.frames_dir, args.output_mp4, args.fps)
-    print(f"Animation created: {args.output_mp4}")
+        
+    compose_video(frames_dir, output_mp4, args.fps)
+    print(f"Animation created: {output_mp4}")
 
 
 if __name__ == "__main__":
