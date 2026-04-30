@@ -1,0 +1,4 @@
+data/*.nc
+output/
+__pycache__/
+.venv/
