@@ -19,6 +19,13 @@
 - První funkční animace za březen 2026 byla úspěšně vyrenderována z 31 NOAA denních souborů do `output/canary_sst_march_2026.mp4`.
 - Výchozí FPS animace bylo sníženo na `3`, aby 31 denních frame vytvořilo zhruba desetisekundové video.
 - Render byl migrován na `cartopy` + Natural Earth `10m` vrstvy (`land`, `coastline`) pro korektní geometrii pobřeží a Kanárských ostrovů.
+- Workflow skriptu byl doplněn o přepínač `--clean-frames`, aby šel opakovaně spouštět bez míchání starých a nových frame.
+- Workflow skriptu validuje `--fps > 0`, aby se předešlo neplatné konfiguraci `ffmpeg`.
+- Pro první vizuální zlepšení byly v SST renderu doplněny chybějící pobřežní pixely přes nearest interpolaci, aby v mořské části nezůstávaly černé maskované plochy.
+- Workflow skriptu nově podporuje `--upscale-factor` (výchozí `4`) pro jemnější vykreslení OISST mřížky bez změny zdroje dat.
+- Pro další výrazný kvalitativní posun vzhledu směrem k FB reelu je doporučený další krok jemnější SST dataset (např. Copernicus Marine), protože OISST 0.25° zůstává datově hrubý.
+- Pro porovnání kvality byl přidán samostatný skript `make_march_2026_animation_copernicus.py`, který kopíruje OISST workflow (daily frame + MP4) nad Copernicus vstupy.
+- Copernicus skript podporuje konfigurovatelný naming (`--filename-template`) a autodetekci běžných názvů SST proměnné a souřadnic, aby fungoval nad různými NetCDF exporty bez refaktoru.
 
 ## Použité technologie
 
