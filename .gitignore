@@ -6,3 +6,5 @@ frames/
 __pycache__/
 .venv/
 .codex
+.env
+test_cm.py
