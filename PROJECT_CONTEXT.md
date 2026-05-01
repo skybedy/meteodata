@@ -19,6 +19,7 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 - Závislosti jsou definované v `requirements.txt`.
 - V repozitáři není `README.md`.
 - V repozitáři není test suite.
+- Soubor `START_NEW_CODEX_CHAT.md` je repo-specifická předávací šablona pro navázání v novém chatu a má zůstávat sladěný s aktuálním stavem tohoto Python projektu.
 - Vstupní NetCDF data nejsou součástí verzovaných souborů; podle `.gitignore` se očekávají v `data/*.nc`.
 - Výstupní obrázky a framy se ukládají do `output/` a `frames/`, které jsou ignorované v Gitu.
 - `ffmpeg` je v systému dostupný.
@@ -27,6 +28,8 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 - Nově je přidán i první paralelní skript `make_animation_copernicus.py` pro stejný výstupní workflow (daily frame + MP4) nad jemnějším zdrojem dat:
   - umí generovat dny dynamicky přes stejné CLI argumenty jako NOAA skript,
   - očekává denní Copernicus `.nc` soubory v `data/copernicus/daily/`,
+  - umí přes `--download` automaticky stáhnout chybějící denní Copernicus soubory,
+  - pro `--download` používá přihlášení přes argumenty (`--copernicus-username`, `--copernicus-password`) nebo env proměnné (`COPERNICUSMARINE_SERVICE_USERNAME`, `COPERNICUSMARINE_SERVICE_PASSWORD`),
   - podporuje konfigurovatelný naming přes `--filename-template` s placeholderem `{date}`,
   - umí autodetekci běžných názvů proměnných/souřadnic (`analysed_sst`/`thetao`/`sst`, `latitude|lat`, `longitude|lon`),
   - obsahuje stejné kroky jako OISST workflow: nearshore fill, volitelný upscale, `--clean-frames`, MP4 přes `ffmpeg`.
@@ -44,6 +47,7 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
 - `numpy`
 - `matplotlib`
 - `cartopy`
+- `copernicusmarine`
 - systémový `ffmpeg`
 
 ## Hlavní adresáře a soubory

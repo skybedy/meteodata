@@ -2,9 +2,9 @@
 
 ## Prompt pro Antigravity / Gemini
 
-Pracuj v repozitari `/home/skybedy/Programming/web/go/go-tene.life`.
+Pracuj v repozitáři `/home/skybedy/Programming/cli/meteodata`.
 
-Nejdriv si precti:
+Nejdřív si přečti:
 
 - `AGENTS.md`
 - `PROJECT_CONTEXT.md`
@@ -12,76 +12,79 @@ Nejdriv si precti:
 - `DECISIONS.md`
 - `START_NEW_CODEX_CHAT.md`
 
-Pak spust:
+Pak spusť:
 
 ```bash
 git branch --show-current
 git status --short
 ```
 
-Nepredpokladej kontext z predchoziho chatu. Navazuj jen na aktualni stav souboru a pracovniho stromu. Nerevertuj nesouvisejici necommitovane zmeny. Pred upravami si prohledni relevantni soubory.
+Nepředpokládej kontext z předchozího chatu. Navaž jen na aktuální stav souborů a working tree. Nerevertuj nesouvisející změny. Před úpravami si vždy projdi relevantní soubory.
 
-### Aktualni predavka
+### Aktuální předávka
 
-Aktualni projekt: `/home/skybedy/Programming/web/go/go-tene.life`
+Aktuální projekt: `/home/skybedy/Programming/cli/meteodata`
 
-Aktualni vetev: `feature/spanish-czech-sounds`
+Aktuální větev: `main`
 
-Cil aktualni prace:
+Cíl projektu:
 
-Doplnujeme stranku `/spanelsko-ceska-slovicka` pro prehravani spanelsko-ceskych audio slovicek.
+Renderovat mapové výstupy sea surface temperature pro Kanárské ostrovy z NetCDF dat, a to jak jako jednorázový PNG render, tak jako vícedenní MP4 animace.
 
-Dulezite zmenene/pridane soubory:
+Důležité soubory:
 
-- `main.go`
-- `internal/web/handlers.go`
-- `internal/models/sounds.go`
-- `internal/web/sounds_test.go`
-- `internal/i18n/i18n.go`
-- `views/nav.html`
-- `views/sounds.html`
-- `public/sounds/*.mp3`
+- `render_oisst.py`
+- `make_animation.py`
+- `make_animation_copernicus.py`
+- `requirements.txt`
+- `PROJECT_CONTEXT.md`
+- `TODO.md`
+- `DECISIONS.md`
 
-Aktualni stav funkcnosti:
+Aktuální stav funkcionality:
 
-- Existuje route `/spanelsko-ceska-slovicka`.
-- Stara route `/sounds` presmerovava na novou adresu.
-- Menu obsahuje odkaz `Spanelsko-ceska slovicka` jako posledni odkaz.
-- MP3 jsou v `public/sounds`.
-- Audio soubory se serviruji pres `/spanelsko-ceska-slovicka/files/...`.
-- Stranka `/spanelsko-ceska-slovicka` ma prehravac, volbu rychlosti `0.75x`, `1x`, `1.25x`, `1.5x`.
-- Nahore jsou 4 zakladni volby: `Prehrat vsechno za sebou`, `Prehrat nahodne`, `Prehrat 1-250`, `Prehrat 251-500`.
-- Pod tim jsou jednotlive soubory k rucnimu prehrani.
-- Jednotlive soubory maji tlacitka `Prehrat` a `Prehrat ve smycce`.
-- Po otevreni stranky se automaticky nevybere prvni lekce.
-- Souhrnne soubory `spanelsko_ceska_slovicka_1_250.mp3` a `spanelsko_ceska_slovicka_251_500.mp3` se nemaji zobrazovat dole v seznamu jednotlivych souboru, maji zustat jen jako horni zakladni volby.
-- Horni 4 volby maji byt vizualne neutralni, zadna nesmi byt modre zvyraznena jako primarni.
+- `render_oisst.py` dělá jednorázový PNG render ze souboru `data/oisst.nc`.
+- `make_animation.py` generuje NOAA OISST animaci z denních souborů v `data/daily/`.
+- NOAA skript podporuje `--month` nebo dvojici `--start-date` / `--end-date`.
+- NOAA skript umí přes `--download` automaticky stáhnout chybějící denní OISST soubory.
+- NOAA skript podporuje `--clean-frames`, `--fps` a `--upscale-factor`.
+- `make_animation_copernicus.py` dělá stejný typ workflow nad denními Copernicus daty v `data/copernicus/daily/`.
+- Copernicus skript podporuje `--filename-template` s placeholderem `{date}` a autodetekci běžných názvů proměnných a souřadnic.
+- Výstupy jdou do `frames/` a `output/`, které nejsou verzované.
+- Projekt zatím nemá formální test suite ani `README.md`.
 
 Pozor:
 
-- V pracovnim stromu jsou i necommitovane kontextove soubory `AGENTS.md`, `PROJECT_CONTEXT.md`, `TODO.md`, `DECISIONS.md` a `START_NEW_CODEX_CHAT.md`. Nerevertovat.
-- `public/css/app.css` je zmeneny, ale pro aktualni praci se zvuky do nej nesahej, pokud to neni nutne.
-- Nemenit nazvy MP3 souboru. Zobrazovane ceske nazvy se resi v Go kodu.
-- Nepredelavat frontend na framework, zustat u HTML templates, Vanilla JS a Tailwind trid.
+- Jde o Python skriptový projekt, ne Go projekt.
+- Při práci se drž jednoduchého současného stylu, bez zavádění nových frameworků.
+- Vstupní data v `data/` nejsou verzovaná a nemají se přidávat do commitu.
+- `output/`, `frames/`, `.venv/` ani citlivé lokální soubory necommitovat.
+- Pokud změníš workflow, CLI argumenty nebo očekávanou strukturu vstupních dat, aktualizuj i `PROJECT_CONTEXT.md`, `TODO.md` a `DECISIONS.md`.
 
-Overeni, ktere naposledy proslo:
+Ověření, které má smysl pustit po změnách:
 
 ```bash
-GOCACHE=/tmp/go-build go test ./...
-GOCACHE=/tmp/go-build go build ./...
-GOCACHE=/tmp/go-build go run /tmp/check_templates.go
+python3 -m py_compile render_oisst.py make_animation.py make_animation_copernicus.py
 ```
 
-Nejblizsi mozne dalsi kroky:
+Pokud jsou lokálně dostupná data, můžeš použít i smoke test:
 
-- Projit `/spanelsko-ceska-slovicka` vizualne v prohlizeci.
-- Doladit texty a vzhled tlacitek.
-- Pripadne zvazit, jestli se pro zvuky pozdeji vyplati manifest misto generovani z nazvu souboru.
+```bash
+python3 make_animation.py --month 2026-03
+python3 make_animation_copernicus.py --month 2026-03
+```
+
+Nejbližší možné další kroky:
+
+- Doplnit automatické stahování Copernicus dat.
+- Přidat stručný `README.md` s lokálním spuštěním.
+- Přidat alespoň základní smoke testy nebo jednoduché testovací scénáře.
+- Doladit publikační vzhled mapy a případně Reel formát videa.
 
 ## První zpráva v novém Codex chatu
 
-Přečti AGENTS.md, PROJECT_CONTEXT.md, TODO.md a DECISIONS.md.
-Zkontroluj aktuální stav projektu přes git status.
+Přečti `AGENTS.md`, `PROJECT_CONTEXT.md`, `TODO.md` a `DECISIONS.md`.
+Zkontroluj aktuální stav projektu přes `git status`.
 Nepředpokládej žádný kontext ze starého chatu.
 
 Pokračuj úkolem:
@@ -89,5 +92,5 @@ Pokračuj úkolem:
 
 ## Závěrečná zpráva na konci pracovního chatu
 
-Aktualizuj PROJECT_CONTEXT.md, TODO.md a DECISIONS.md podle toho, co jsme právě změnili, aby šlo bezpečně navázat v novém chatu.
-Potom ukaž git status a navrhni commit message.
+Aktualizuj `PROJECT_CONTEXT.md`, `TODO.md` a `DECISIONS.md` podle toho, co se skutečně změnilo, aby šlo bezpečně navázat v novém chatu.
+Potom ukaž `git status` a navrhni commit message.

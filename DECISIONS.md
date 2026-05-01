@@ -8,6 +8,7 @@
 
 - Projekt je aktuálně veden jako jednoduché Python skripty bez zavádění dalšího frameworku.
 - Závislosti jsou aktuálně spravované přes `requirements.txt`.
+- `START_NEW_CODEX_CHAT.md` má fungovat jako lokální handoff šablona pro tento konkrétní repozitář a nesmí obsahovat přenesený kontext z jiného projektu.
 - Vstupní NetCDF data nejsou součástí repozitáře a očekávají se lokálně v `data/`.
 - Původní jednorázový render zůstává v `render_oisst.py` se vstupem `data/oisst.nc`.
 - Skript pro animaci NOAA dat byl zobecněn a přejmenován na `make_animation.py`, který:
@@ -28,6 +29,8 @@
 - Pro další výrazný kvalitativní posun vzhledu směrem k FB reelu je doporučený další krok jemnější SST dataset (např. Copernicus Marine), protože OISST 0.25° zůstává datově hrubý.
 - Pro porovnání kvality byl přidán paralelní skript `make_animation_copernicus.py`, který kopíruje OISST workflow a také plně podporuje generování map napříč libovolnými daty přes `--month` a `--start-date`.
 - Copernicus skript podporuje konfigurovatelný naming (`--filename-template`) a autodetekci běžných názvů SST proměnné a souřadnic, aby fungoval nad různými NetCDF exporty bez refaktoru.
+- Copernicus workflow bylo sjednoceno s NOAA i na úrovni přepínačů: skript `make_animation_copernicus.py` nově podporuje `--download`, aby uměl automaticky stáhnout chybějící denní soubory.
+- Pro Copernicus stahování je zvolena knihovna `copernicusmarine` (přidána do `requirements.txt`) a přihlašovací údaje jsou řešeny přes CLI argumenty (`--copernicus-username`, `--copernicus-password`) nebo přes env proměnné `COPERNICUSMARINE_SERVICE_USERNAME` a `COPERNICUSMARINE_SERVICE_PASSWORD`.
 
 ## Použité technologie
 

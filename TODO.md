@@ -2,9 +2,10 @@
 
 ## Teď (Plán na zítra)
 
-- [ ] Vytvořit bezplatný účet na portálu Copernicus Marine Service
-- [ ] Zprovoznit autentizaci pro stahování dat (přes modul `copernicusmarine`)
-- [ ] Doprogramovat automatické stahování (přepínač `--download`) do `make_animation_copernicus.py`
+- [x] Vytvořit bezplatný účet na portálu Copernicus Marine Service
+- [x] Zprovoznit autentizaci pro stahování dat (přes modul `copernicusmarine`)
+- [x] Doprogramovat automatické stahování (přepínač `--download`) do `make_animation_copernicus.py`
+- [ ] Ověřit Copernicus `--download` end-to-end nad březnem 2026 s reálnými přihlašovacími údaji
 
 ## Další kroky
 

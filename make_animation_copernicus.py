@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import argparse
 import calendar
+import os
 import subprocess
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import cartopy
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+import copernicusmarine
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
@@ -21,6 +23,7 @@ CARTOPY_DATA_DIR = Path("data/cartopy")
 SST_CANDIDATES = ("analysed_sst", "thetao", "sst")
 LAT_CANDIDATES = ("latitude", "lat")
 LON_CANDIDATES = ("longitude", "lon")
+DEFAULT_COPERNICUS_DATASET_ID = "cmems_mod_glo_phy-thetao_anfc_0.083deg_P1D-m"
 
 
 def generate_dates(start_date: date, end_date: date) -> list[date]:
@@ -73,6 +76,54 @@ def open_sst_subset(input_path: Path) -> xr.DataArray:
             sst = sst.assign_coords(longitude=((sst.longitude + 180) % 360) - 180).sortby("longitude")
 
         return sst.sel(latitude=slice(LAT_MIN, LAT_MAX), longitude=slice(LON_MIN, LON_MAX)).load()
+
+
+def resolve_copernicus_credentials(username: str | None, password: str | None) -> tuple[str | None, str | None]:
+    resolved_username = username or os.getenv("COPERNICUSMARINE_SERVICE_USERNAME") or os.getenv("CMEMS_USERNAME")
+    resolved_password = password or os.getenv("COPERNICUSMARINE_SERVICE_PASSWORD") or os.getenv("CMEMS_PASSWORD")
+    return resolved_username, resolved_password
+
+
+def download_copernicus_file(
+    day: date,
+    daily_dir: Path,
+    filename: str,
+    dataset_id: str,
+    dataset_version: str | None,
+    username: str | None,
+    password: str | None,
+) -> bool:
+    start_dt = datetime(day.year, day.month, day.day, 0, 0, 0)
+    end_dt = start_dt + timedelta(hours=23, minutes=59, seconds=59)
+
+    daily_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        copernicusmarine.subset(
+            dataset_id=dataset_id,
+            dataset_version=dataset_version,
+            variables=["thetao"],
+            minimum_longitude=LON_MIN,
+            maximum_longitude=LON_MAX,
+            minimum_latitude=LAT_MIN,
+            maximum_latitude=LAT_MAX,
+            start_datetime=start_dt.isoformat(),
+            end_datetime=end_dt.isoformat(),
+            output_directory=str(daily_dir),
+            output_filename=filename,
+            file_format="netcdf",
+            username=username,
+            password=password,
+            overwrite=True,
+            disable_progress_bar=True,
+        )
+        return True
+    except Exception as e:
+        print(f"Failed to download Copernicus data for {day:%Y-%m-%d}: {e}")
+        dest_path = daily_dir / filename
+        if dest_path.exists():
+            dest_path.unlink()
+        return False
 
 
 def render_frame(input_path: Path, output_path: Path, day: date, upscale_factor: int) -> None:
@@ -166,8 +217,46 @@ def main() -> None:
     parser.add_argument("--frames-dir", type=Path, help="Override default frames dir")
     parser.add_argument("--output-mp4", type=Path, help="Override default output mp4")
     parser.add_argument("--fps", type=int, default=3)
-    parser.add_argument("--upscale-factor", type=int, default=2)
-    parser.add_argument("--clean-frames", action="store_true")
+    parser.add_argument(
+        "--upscale-factor",
+        type=int,
+        default=2,
+        help="Upscale SST grid before rendering (1 disables upscaling).",
+    )
+    parser.add_argument(
+        "--clean-frames",
+        action="store_true",
+        help="Delete existing frame_*.png files in frames dir before rendering.",
+    )
+    parser.add_argument(
+        "--download",
+        action="store_true",
+        help="Automatically download missing Copernicus daily NetCDF files.",
+    )
+    parser.add_argument(
+        "--dataset-id",
+        type=str,
+        default=DEFAULT_COPERNICUS_DATASET_ID,
+        help="Copernicus dataset id used for --download.",
+    )
+    parser.add_argument(
+        "--dataset-version",
+        type=str,
+        default=None,
+        help="Optional Copernicus dataset version for --download.",
+    )
+    parser.add_argument(
+        "--copernicus-username",
+        type=str,
+        default=None,
+        help="Copernicus username (or use COPERNICUSMARINE_SERVICE_USERNAME / CMEMS_USERNAME).",
+    )
+    parser.add_argument(
+        "--copernicus-password",
+        type=str,
+        default=None,
+        help="Copernicus password (or use COPERNICUSMARINE_SERVICE_PASSWORD / CMEMS_PASSWORD).",
+    )
     args = parser.parse_args()
 
     if args.fps <= 0:
@@ -176,6 +265,8 @@ def main() -> None:
         parser.error("--upscale-factor must be greater than 0.")
     if "{date}" not in args.filename_template:
         parser.error("--filename-template must include {date}.")
+    if args.download and not args.dataset_id:
+        parser.error("--dataset-id is required when --download is used.")
 
     if args.month:
         year, month = map(int, args.month.split("-"))
@@ -207,17 +298,45 @@ def main() -> None:
         for old_frame in sorted(frames_dir.glob("frame_*.png")):
             old_frame.unlink()
 
+    resolved_username: str | None = None
+    resolved_password: str | None = None
+    if args.download:
+        resolved_username, resolved_password = resolve_copernicus_credentials(
+            args.copernicus_username,
+            args.copernicus_password,
+        )
+        if not resolved_username or not resolved_password:
+            parser.error(
+                "Copernicus credentials are required for --download. "
+                "Use --copernicus-username/--copernicus-password "
+                "or set COPERNICUSMARINE_SERVICE_USERNAME and COPERNICUSMARINE_SERVICE_PASSWORD."
+            )
+
     rendered = 0
     missing: list[Path] = []
     for day in generate_dates(start_date, end_date):
         filename = args.filename_template.format(date=f"{day:%Y%m%d}")
         daily_file = args.daily_dir / filename
         frame_path = frames_dir / f"frame_{day:%Y-%m-%d}.png"
-        
+
         if not daily_file.exists():
-            missing.append(daily_file)
-            continue
-            
+            if args.download:
+                print(f"Downloading missing Copernicus data for {day:%Y-%m-%d}...")
+                if not download_copernicus_file(
+                    day=day,
+                    daily_dir=args.daily_dir,
+                    filename=filename,
+                    dataset_id=args.dataset_id,
+                    dataset_version=args.dataset_version,
+                    username=resolved_username,
+                    password=resolved_password,
+                ):
+                    missing.append(daily_file)
+                    continue
+            else:
+                missing.append(daily_file)
+                continue
+
         print(f"Rendering {day:%Y-%m-%d}: {daily_file}")
         render_frame(daily_file, frame_path, day, args.upscale_factor)
         rendered += 1
@@ -227,11 +346,11 @@ def main() -> None:
         print("Missing daily files:")
         for path in missing:
             print(f"  - {path}")
-            
+
     if rendered == 0:
         print("No frames were rendered, skipping MP4 composition.")
         return
-        
+
     compose_video(frames_dir, output_mp4, args.fps)
     print(f"Animation created: {output_mp4}")
 
