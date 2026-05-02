@@ -6,6 +6,7 @@
 - [x] Zprovoznit autentizaci pro stahování dat (přes modul `copernicusmarine`)
 - [x] Doprogramovat automatické stahování (přepínač `--download`) do `make_animation_copernicus.py`
 - [ ] Ověřit Copernicus `--download` end-to-end nad březnem 2026 s reálnými přihlašovacími údaji
+- [ ] Ověřit nové výchozí chování `run.sh` bez argumentů na plném historickém rozsahu (`data/copernicus/daily`) a změřit dobu běhu pro větší rozsah dní
 
 ## Další kroky
 
@@ -25,3 +26,5 @@
 - [ ] Zvážit zabalení skriptu do robustnější CLI struktury
 - [ ] Zvážit automatizaci generování více datových výstupů
 - [ ] Zvážit build nebo release workflow, pokud se projekt rozšíří
+
+- [ ] Otestovat `--speed-factor 2` na dlouhém rozsahu (rok 2025) a ověřit cílovou délku videa.

@@ -12,12 +12,13 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import copernicusmarine
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as pe
 import numpy as np
 import xarray as xr
 
 LAT_MIN, LAT_MAX = 24, 32
 LON_MIN, LON_MAX = -20, -10
-VMIN, VMAX = 16, 20.5
+VMIN, VMAX = 17, 26
 CARTOPY_DATA_DIR = Path("data/cartopy")
 
 SST_CANDIDATES = ("analysed_sst", "thetao", "sst")
@@ -25,10 +26,31 @@ LAT_CANDIDATES = ("latitude", "lat")
 LON_CANDIDATES = ("longitude", "lon")
 DEFAULT_COPERNICUS_DATASET_ID = "cmems_mod_glo_phy-thetao_anfc_0.083deg_P1D-m"
 
+ISLAND_LABELS = [
+    ("La Palma", -17.86, 28.68, -18.85, 29.42),
+    ("El Hierro", -17.99, 27.73, -18.95, 27.20),
+    ("La Gomera", -17.25, 28.09, -18.95, 28.05),
+    ("Tenerife", -16.57, 28.29, -17.45, 28.95),
+    ("Gran Canaria", -15.60, 27.96, -16.95, 27.35),
+    ("Fuerteventura", -14.03, 28.36, -15.25, 29.05),
+    ("Lanzarote", -13.64, 29.04, -14.90, 29.85),
+]
+
 
 def generate_dates(start_date: date, end_date: date) -> list[date]:
     delta = end_date - start_date
     return [start_date + timedelta(days=i) for i in range(delta.days + 1)]
+
+
+def parse_month_arg(month_arg: str, parser: argparse.ArgumentParser) -> tuple[date, date]:
+    try:
+        year, month = map(int, month_arg.split("-"))
+        start_date = date(year, month, 1)
+    except ValueError:
+        parser.error("--month must be in YYYY-MM format.")
+    _, last_day = calendar.monthrange(start_date.year, start_date.month)
+    end_date = date(start_date.year, start_date.month, last_day)
+    return start_date, end_date
 
 
 def select_existing_name(names: tuple[str, ...], available: list[str], label: str) -> str:
@@ -126,7 +148,76 @@ def download_copernicus_file(
         return False
 
 
-def render_frame(input_path: Path, output_path: Path, day: date, upscale_factor: int) -> None:
+def add_map_labels(ax: plt.Axes, africa_label: str) -> None:
+    text_effects = [pe.withStroke(linewidth=2.2, foreground="#111111")]
+
+    for name, lon, lat, tx, ty in ISLAND_LABELS:
+        ax.annotate(
+            name,
+            xy=(lon, lat),
+            xytext=(tx, ty),
+            xycoords=ccrs.PlateCarree()._as_mpl_transform(ax),
+            textcoords=ccrs.PlateCarree()._as_mpl_transform(ax),
+            fontsize=8.5,
+            color="#f3efe6",
+            weight="semibold",
+            ha="left",
+            va="center",
+            path_effects=text_effects,
+            arrowprops={
+                "arrowstyle": "-",
+                "color": "#1f2933",
+                "lw": 1.0,
+                "alpha": 0.95,
+            },
+            zorder=6,
+        )
+
+    ax.text(
+        -12.2,
+        26.6,
+        africa_label,
+        transform=ccrs.PlateCarree(),
+        fontsize=14,
+        color="#ffffff",
+        weight="bold",
+        ha="center",
+        va="center",
+        alpha=0.95,
+        path_effects=text_effects,
+        zorder=6,
+    )
+
+
+def add_watermark(ax: plt.Axes, text: str, alpha: float) -> None:
+    if not text:
+        return
+    ax.text(
+        -12.2,
+        24.6,
+        text,
+        transform=ccrs.PlateCarree(),
+        fontsize=11.5,
+        color="#ffffff",
+        weight="semibold",
+        ha="center",
+        va="center",
+        alpha=alpha,
+        path_effects=[pe.withStroke(linewidth=2.0, foreground="#111111")],
+        zorder=7,
+    )
+
+
+def render_frame(
+    input_path: Path,
+    output_path: Path,
+    day: date,
+    upscale_factor: int,
+    add_labels: bool,
+    africa_label: str,
+    watermark_text: str,
+    watermark_alpha: float,
+) -> None:
     sst_subset = open_sst_subset(input_path)
     sst_filled = fill_nearshore_gaps(sst_subset)
     sst_render = upscale_grid(sst_filled, upscale_factor)
@@ -161,7 +252,10 @@ def render_frame(input_path: Path, output_path: Path, day: date, upscale_factor:
     )
     ax.add_feature(land, linewidth=0.55, zorder=3)
     ax.add_feature(cfeature.COASTLINE.with_scale("10m"), linewidth=0.35, edgecolor="#f5f0e6", zorder=4)
-    ax.set_title(f"Sea Surface Temperature - Canary Islands - {day:%Y-%m-%d}", pad=12)
+    ax.set_title(
+        f"Sea Surface Temperature - Canary Islands - {day:%Y-%m-%d} - Data: Copernicus Marine",
+        pad=12,
+    )
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
     ax.gridlines(
@@ -173,6 +267,9 @@ def render_frame(input_path: Path, output_path: Path, day: date, upscale_factor:
         alpha=0.35,
     )
     ax.set_extent([float(lon.min()), float(lon.max()), float(lat.min()), float(lat.max())], ccrs.PlateCarree())
+    if add_labels:
+        add_map_labels(ax, africa_label)
+    add_watermark(ax, watermark_text, watermark_alpha)
 
     cbar = fig.colorbar(im, ax=ax, extend="both", fraction=0.046, pad=0.04)
     cbar.set_label("Sea surface temperature (°C)")
@@ -218,6 +315,12 @@ def main() -> None:
     parser.add_argument("--output-mp4", type=Path, help="Override default output mp4")
     parser.add_argument("--fps", type=int, default=3)
     parser.add_argument(
+        "--speed-factor",
+        type=float,
+        default=1.0,
+        help="Playback speed multiplier for output video (e.g. 2.0 = half duration).",
+    )
+    parser.add_argument(
         "--upscale-factor",
         type=int,
         default=2,
@@ -257,22 +360,46 @@ def main() -> None:
         default=None,
         help="Copernicus password (or use COPERNICUSMARINE_SERVICE_PASSWORD / CMEMS_PASSWORD).",
     )
+    parser.add_argument(
+        "--labels",
+        action="store_true",
+        help="Draw island labels and Africa label on the map.",
+    )
+    parser.add_argument(
+        "--africa-label",
+        type=str,
+        default="Africa",
+        help="Label text for the African mainland.",
+    )
+    parser.add_argument(
+        "--watermark-text",
+        type=str,
+        default="",
+        help="Optional watermark text shown in the lower-right dark mainland area.",
+    )
+    parser.add_argument(
+        "--watermark-alpha",
+        type=float,
+        default=0.78,
+        help="Watermark opacity from 0 to 1.",
+    )
     args = parser.parse_args()
 
     if args.fps <= 0:
         parser.error("--fps must be greater than 0.")
+    if args.speed_factor <= 0:
+        parser.error("--speed-factor must be greater than 0.")
     if args.upscale_factor <= 0:
         parser.error("--upscale-factor must be greater than 0.")
     if "{date}" not in args.filename_template:
         parser.error("--filename-template must include {date}.")
     if args.download and not args.dataset_id:
         parser.error("--dataset-id is required when --download is used.")
+    if not (0 <= args.watermark_alpha <= 1):
+        parser.error("--watermark-alpha must be between 0 and 1.")
 
     if args.month:
-        year, month = map(int, args.month.split("-"))
-        start_date = date(year, month, 1)
-        _, last_day = calendar.monthrange(year, month)
-        end_date = date(year, month, last_day)
+        start_date, end_date = parse_month_arg(args.month, parser)
         default_frames_dir = Path(f"frames/{start_date:%Y_%m}_copernicus")
         default_output_mp4 = Path(f"output/canary_sst_{start_date:%Y_%m}_copernicus.mp4")
     elif args.start_date and args.end_date:
@@ -338,7 +465,16 @@ def main() -> None:
                 continue
 
         print(f"Rendering {day:%Y-%m-%d}: {daily_file}")
-        render_frame(daily_file, frame_path, day, args.upscale_factor)
+        render_frame(
+            daily_file,
+            frame_path,
+            day,
+            args.upscale_factor,
+            add_labels=args.labels,
+            africa_label=args.africa_label,
+            watermark_text=args.watermark_text,
+            watermark_alpha=args.watermark_alpha,
+        )
         rendered += 1
 
     print(f"Rendered frames: {rendered}")
@@ -351,7 +487,9 @@ def main() -> None:
         print("No frames were rendered, skipping MP4 composition.")
         return
 
-    compose_video(frames_dir, output_mp4, args.fps)
+    effective_fps = max(1, int(round(args.fps * args.speed_factor)))
+    print(f"Composing MP4 at {effective_fps} fps (base {args.fps} * speed-factor {args.speed_factor}).")
+    compose_video(frames_dir, output_mp4, effective_fps)
     print(f"Animation created: {output_mp4}")
 
 

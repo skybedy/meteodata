@@ -33,6 +33,8 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
   - podporuje konfigurovatelný naming přes `--filename-template` s placeholderem `{date}`,
   - umí autodetekci běžných názvů proměnných/souřadnic (`analysed_sst`/`thetao`/`sst`, `latitude|lat`, `longitude|lon`),
   - obsahuje stejné kroky jako OISST workflow: nearshore fill, volitelný upscale, `--clean-frames`, MP4 přes `ffmpeg`.
+- `run.sh` nově bez argumentů automaticky vezme historický rozsah z lokálně dostupných Copernicus denních souborů (od nejstaršího po nejnovější), takže se ve výstupu neztratí historie kvůli fixnímu měsíci.
+- `make_animation_copernicus.py` má explicitní validaci argumentu `--month` ve formátu `YYYY-MM`.
 - Skládání MP4 z frame bylo lokálně ověřeno přes `ffmpeg` na testovacím frame se jménem ve formátu `frame_YYYY-MM-DD.png`.
 - End-to-end workflow pro `2026-03-01` až `2026-03-31` bylo lokálně ověřeno nad 31 NOAA denními soubory v `data/daily/`.
 - Vznikl výstup `output/canary_sst_march_2026.mp4` a 31 frame v `frames/march_2026/`.
@@ -110,3 +112,7 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 - Ověřený výstup animace má `31` frame, délku přibližně `10.33 s`, rozlišení `1424x1104` a `3 fps`.
 - Pokud se změní způsob spuštění, testování nebo struktura projektu, aktualizovat tento soubor.
 - Pokud přibudou důležitá technická rozhodnutí, zapsat je do `DECISIONS.md`.
+
+- `make_animation_copernicus.py` nově podporuje `--speed-factor` pro volitelné zrychlení přehrávání výsledného MP4 (násobení FPS při kompozici videa).
+
+- Barevná škála Copernicus SST renderu je aktuálně fixně nastavena na `17-26 °C`.

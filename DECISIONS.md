@@ -31,6 +31,8 @@
 - Copernicus skript podporuje konfigurovatelný naming (`--filename-template`) a autodetekci běžných názvů SST proměnné a souřadnic, aby fungoval nad různými NetCDF exporty bez refaktoru.
 - Copernicus workflow bylo sjednoceno s NOAA i na úrovni přepínačů: skript `make_animation_copernicus.py` nově podporuje `--download`, aby uměl automaticky stáhnout chybějící denní soubory.
 - Pro Copernicus stahování je zvolena knihovna `copernicusmarine` (přidána do `requirements.txt`) a přihlašovací údaje jsou řešeny přes CLI argumenty (`--copernicus-username`, `--copernicus-password`) nebo přes env proměnné `COPERNICUSMARINE_SERVICE_USERNAME` a `COPERNICUSMARINE_SERVICE_PASSWORD`.
+- Spouštěč `run.sh` už bez argumentů nepoužívá natvrdo měsíc `2026-03`; nově automaticky renderuje celý dostupný historický rozsah podle nejstaršího a nejnovějšího souboru v `data/copernicus/daily/` a jen při prázdném adresáři fallbackne na aktuální měsíc.
+- Parsování `--month` v `make_animation_copernicus.py` bylo zpřesněno do explicitní validace formátu `YYYY-MM`, aby při chybě vznikla čistá CLI hláška místo tracebacku.
 
 ## Použité technologie
 
@@ -62,3 +64,7 @@
 ## Nezaznamenaná rozhodnutí
 
 Další zásadní technická rozhodnutí zatím nejsou zaznamenána.
+
+- Copernicus animační skript nově podporuje volitelný parametr `--speed-factor` (výchozí `1.0`), který násobí výstupní FPS při skládání MP4; např. `2.0` zkrátí výsledné video přibližně na polovinu.
+
+- Pro Copernicus animace byl fixní barevný rozsah SST upraven z `16-20.5 °C` na `17-26 °C`, aby teplejší období nebylo vizuálně saturováno.
