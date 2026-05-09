@@ -80,3 +80,7 @@ Další zásadní technická rozhodnutí zatím nejsou zaznamenána.
 - Byl úspěšně ověřen end-to-end workflow pro region `tenerife` za duben 2026 s automatickým stahováním dat z Copernicu. Výsledek byl uložen do `output/tenerife_sst_2026_04_copernicus.mp4`.
 - Pro spouštění byl použit wrapper `run.sh`, který automaticky přidává vodoznak `https://tene.life`, popisky ostrovů a čistí staré framy.
 - Skript `make_animation_copernicus.py` byl rozšířen o parametry `--vmin` a `--vmax`, které umožňují dynamicky měnit barevnou škálu teploty přímo z příkazové řádky.
+- Poměr stran animace byl změněn z 9:7 na **9:6** a okraje byly nastaveny manuálně, aby se minimalizovalo prázdné místo nahoře a mapa vyplnila většinu plochy.
+- Bylo implementováno **filtrování popisků ostrovů**, aby se u velkých přiblížení (např. Tenerife) nevykreslovaly bludné čáry k ostrovům mimo viditelnou oblast.
+- Vodoznak `https://tene.life` byl fixován do pravého dolního rohu obrazovky (nezávisle na souřadnicích), aby byl vždy viditelný.
+- Byl vytvořen interaktivní webový prohlížeč **index.html**, který umožňuje plynulé procházení vygenerovaných snímků pomocí JS.

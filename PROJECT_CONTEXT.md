@@ -120,3 +120,6 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 - **Duben 2026 (Tenerife)**: Úspěšně vygenerováno video za celý duben 2026 s detailním výřezem pro Tenerife pomocí Copernicus dat. Výstup: `output/tenerife_sst_2026_04_copernicus.mp4`.
 - Projekt nyní obsahuje `README.md` s dokumentací.
 - Přidána podpora pro `--vmin` a `--vmax` (nastavení teplotní škály) v `make_animation_copernicus.py`.
+- **Layout 9:6**: Optimalizováno využití plochy, zredukováno bílé místo nahoře.
+- **Interaktivní Demo**: V kořeni projektu je `index.html`, který slouží jako webový prohlížeč pro vyrenderované snímky (vyžaduje metadata.json vygenerované přes `--export-metadata`).
+- **Label Fix**: Popisky se vykreslují jen pro objekty uvnitř mapy.
