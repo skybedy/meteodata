@@ -18,7 +18,7 @@ import xarray as xr
 
 REGION_BBOXES: dict[str, tuple[float, float, float, float]] = {
     "canary": (24.0, 32.0, -20.0, -10.0),
-    "tenerife": (27.9, 28.7, -16.95, -16.05),
+    "tenerife": (27.9, 28.7, -17.1, -16.0),
 }
 DEFAULT_VMIN, DEFAULT_VMAX = 17, 26
 CARTOPY_DATA_DIR = Path("data/cartopy")
