@@ -68,3 +68,14 @@ Další zásadní technická rozhodnutí zatím nejsou zaznamenána.
 - Copernicus animační skript nově podporuje volitelný parametr `--speed-factor` (výchozí `1.0`), který násobí výstupní FPS při skládání MP4; např. `2.0` zkrátí výsledné video přibližně na polovinu.
 
 - Pro Copernicus animace byl fixní barevný rozsah SST upraven z `16-20.5 °C` na `17-26 °C`, aby teplejší období nebylo vizuálně saturováno.
+- Copernicus animační skript nově podporuje regionální preset přes `--region` (`canary` / `tenerife`), aby šlo bez ruční editace kódu renderovat i lokální výřez jen kolem Tenerife.
+
+## Datum
+
+- 2026-05-09
+
+## Důležitá technická rozhodnutí
+
+- Byl přidán základní `README.md` s popisem projektu a návodem k použití skriptů.
+- Byl úspěšně ověřen end-to-end workflow pro region `tenerife` za duben 2026 s automatickým stahováním dat z Copernicu. Výsledek byl uložen do `output/tenerife_sst_2026_04_copernicus.mp4`.
+- Pro spouštění byl použit wrapper `run.sh`, který automaticky přidává vodoznak `https://tene.life`, popisky ostrovů a čistí staré framy.

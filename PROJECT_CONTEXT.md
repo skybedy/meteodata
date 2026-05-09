@@ -35,6 +35,7 @@ Malý Python skriptový projekt pro načtení NOAA OISST NetCDF datasetu a rende
   - obsahuje stejné kroky jako OISST workflow: nearshore fill, volitelný upscale, `--clean-frames`, MP4 přes `ffmpeg`.
 - `run.sh` nově bez argumentů automaticky vezme historický rozsah z lokálně dostupných Copernicus denních souborů (od nejstaršího po nejnovější), takže se ve výstupu neztratí historie kvůli fixnímu měsíci.
 - `make_animation_copernicus.py` má explicitní validaci argumentu `--month` ve formátu `YYYY-MM`.
+- `make_animation_copernicus.py` nově podporuje `--region` s presety `canary` a `tenerife`, který řídí geografický výřez pro render i automatické stahování dat.
 - Skládání MP4 z frame bylo lokálně ověřeno přes `ffmpeg` na testovacím frame se jménem ve formátu `frame_YYYY-MM-DD.png`.
 - End-to-end workflow pro `2026-03-01` až `2026-03-31` bylo lokálně ověřeno nad 31 NOAA denními soubory v `data/daily/`.
 - Vznikl výstup `output/canary_sst_march_2026.mp4` a 31 frame v `frames/march_2026/`.
@@ -114,5 +115,7 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 - Pokud přibudou důležitá technická rozhodnutí, zapsat je do `DECISIONS.md`.
 
 - `make_animation_copernicus.py` nově podporuje `--speed-factor` pro volitelné zrychlení přehrávání výsledného MP4 (násobení FPS při kompozici videa).
-
 - Barevná škála Copernicus SST renderu je aktuálně fixně nastavena na `17-26 °C`.
+
+- **Duben 2026 (Tenerife)**: Úspěšně vygenerováno video za celý duben 2026 s detailním výřezem pro Tenerife pomocí Copernicus dat. Výstup: `output/tenerife_sst_2026_04_copernicus.mp4`.
+- Projekt nyní obsahuje `README.md` s dokumentací.

@@ -16,8 +16,10 @@ import matplotlib.patheffects as pe
 import numpy as np
 import xarray as xr
 
-LAT_MIN, LAT_MAX = 24, 32
-LON_MIN, LON_MAX = -20, -10
+REGION_BBOXES: dict[str, tuple[float, float, float, float]] = {
+    "canary": (24.0, 32.0, -20.0, -10.0),
+    "tenerife": (27.3, 29.4, -17.7, -15.9),
+}
 VMIN, VMAX = 17, 26
 CARTOPY_DATA_DIR = Path("data/cartopy")
 
@@ -82,7 +84,7 @@ def upscale_grid(sst_subset: xr.DataArray, factor: int) -> xr.DataArray:
     return sst_subset.interp(latitude=lat_new, longitude=lon_new, method="linear")
 
 
-def open_sst_subset(input_path: Path) -> xr.DataArray:
+def open_sst_subset(input_path: Path, lat_min: float, lat_max: float, lon_min: float, lon_max: float) -> xr.DataArray:
     with xr.open_dataset(input_path) as ds:
         var_name = select_existing_name(SST_CANDIDATES, list(ds.data_vars), "SST variable")
         lat_name = select_existing_name(LAT_CANDIDATES, list(ds.coords), "latitude coordinate")
@@ -97,7 +99,7 @@ def open_sst_subset(input_path: Path) -> xr.DataArray:
         if float(sst.longitude.max()) > 180:
             sst = sst.assign_coords(longitude=((sst.longitude + 180) % 360) - 180).sortby("longitude")
 
-        return sst.sel(latitude=slice(LAT_MIN, LAT_MAX), longitude=slice(LON_MIN, LON_MAX)).load()
+        return sst.sel(latitude=slice(lat_min, lat_max), longitude=slice(lon_min, lon_max)).load()
 
 
 def resolve_copernicus_credentials(username: str | None, password: str | None) -> tuple[str | None, str | None]:
@@ -110,6 +112,10 @@ def download_copernicus_file(
     day: date,
     daily_dir: Path,
     filename: str,
+    lat_min: float,
+    lat_max: float,
+    lon_min: float,
+    lon_max: float,
     dataset_id: str,
     dataset_version: str | None,
     username: str | None,
@@ -125,10 +131,10 @@ def download_copernicus_file(
             dataset_id=dataset_id,
             dataset_version=dataset_version,
             variables=["thetao"],
-            minimum_longitude=LON_MIN,
-            maximum_longitude=LON_MAX,
-            minimum_latitude=LAT_MIN,
-            maximum_latitude=LAT_MAX,
+            minimum_longitude=lon_min,
+            maximum_longitude=lon_max,
+            minimum_latitude=lat_min,
+            maximum_latitude=lat_max,
             start_datetime=start_dt.isoformat(),
             end_datetime=end_dt.isoformat(),
             output_directory=str(daily_dir),
@@ -212,13 +218,18 @@ def render_frame(
     input_path: Path,
     output_path: Path,
     day: date,
+    lat_min: float,
+    lat_max: float,
+    lon_min: float,
+    lon_max: float,
+    region_label: str,
     upscale_factor: int,
     add_labels: bool,
     africa_label: str,
     watermark_text: str,
     watermark_alpha: float,
 ) -> None:
-    sst_subset = open_sst_subset(input_path)
+    sst_subset = open_sst_subset(input_path, lat_min=lat_min, lat_max=lat_max, lon_min=lon_min, lon_max=lon_max)
     sst_filled = fill_nearshore_gaps(sst_subset)
     sst_render = upscale_grid(sst_filled, upscale_factor)
 
@@ -253,7 +264,7 @@ def render_frame(
     ax.add_feature(land, linewidth=0.55, zorder=3)
     ax.add_feature(cfeature.COASTLINE.with_scale("10m"), linewidth=0.35, edgecolor="#f5f0e6", zorder=4)
     ax.set_title(
-        f"Sea Surface Temperature - Canary Islands - {day:%Y-%m-%d} - Data: Copernicus Marine",
+        f"Sea Surface Temperature - {region_label} - {day:%Y-%m-%d} - Data: Copernicus Marine",
         pad=12,
     )
     ax.set_xlabel("Longitude")
@@ -361,6 +372,13 @@ def main() -> None:
         help="Copernicus password (or use COPERNICUSMARINE_SERVICE_PASSWORD / CMEMS_PASSWORD).",
     )
     parser.add_argument(
+        "--region",
+        type=str,
+        default="canary",
+        choices=sorted(REGION_BBOXES.keys()),
+        help="Map region extent preset.",
+    )
+    parser.add_argument(
         "--labels",
         action="store_true",
         help="Draw island labels and Africa label on the map.",
@@ -400,13 +418,13 @@ def main() -> None:
 
     if args.month:
         start_date, end_date = parse_month_arg(args.month, parser)
-        default_frames_dir = Path(f"frames/{start_date:%Y_%m}_copernicus")
-        default_output_mp4 = Path(f"output/canary_sst_{start_date:%Y_%m}_copernicus.mp4")
+        default_frames_dir = Path(f"frames/{start_date:%Y_%m}_{args.region}_copernicus")
+        default_output_mp4 = Path(f"output/{args.region}_sst_{start_date:%Y_%m}_copernicus.mp4")
     elif args.start_date and args.end_date:
         start_date = args.start_date
         end_date = args.end_date
-        default_frames_dir = Path(f"frames/{start_date:%Y%m%d}_{end_date:%Y%m%d}_copernicus")
-        default_output_mp4 = Path(f"output/canary_sst_{start_date:%Y%m%d}_{end_date:%Y%m%d}_copernicus.mp4")
+        default_frames_dir = Path(f"frames/{start_date:%Y%m%d}_{end_date:%Y%m%d}_{args.region}_copernicus")
+        default_output_mp4 = Path(f"output/{args.region}_sst_{start_date:%Y%m%d}_{end_date:%Y%m%d}_copernicus.mp4")
     else:
         parser.error("Either --month or both --start-date and --end-date must be provided.")
 
@@ -415,6 +433,7 @@ def main() -> None:
 
     frames_dir = args.frames_dir or default_frames_dir
     output_mp4 = args.output_mp4 or default_output_mp4
+    lat_min, lat_max, lon_min, lon_max = REGION_BBOXES[args.region]
 
     frames_dir.mkdir(parents=True, exist_ok=True)
     output_mp4.parent.mkdir(parents=True, exist_ok=True)
@@ -453,6 +472,10 @@ def main() -> None:
                     day=day,
                     daily_dir=args.daily_dir,
                     filename=filename,
+                    lat_min=lat_min,
+                    lat_max=lat_max,
+                    lon_min=lon_min,
+                    lon_max=lon_max,
                     dataset_id=args.dataset_id,
                     dataset_version=args.dataset_version,
                     username=resolved_username,
@@ -469,7 +492,12 @@ def main() -> None:
             daily_file,
             frame_path,
             day,
-            args.upscale_factor,
+            upscale_factor=args.upscale_factor,
+            lat_min=lat_min,
+            lat_max=lat_max,
+            lon_min=lon_min,
+            lon_max=lon_max,
+            region_label=args.region.capitalize(),
             add_labels=args.labels,
             africa_label=args.africa_label,
             watermark_text=args.watermark_text,

@@ -11,13 +11,14 @@
 ## Další kroky
 
 - [ ] Přidat základní testy nebo alespoň jednoduché smoke testy
-- [ ] Přidat do `README.md` i postup k automatickému stahování NOAA OISST dat a práci s daty Copernicus
+- [x] Přidat do `README.md` i postup k automatickému stahování NOAA OISST dat a práci s daty Copernicus
 - [ ] Zvážit nastavení `MPLCONFIGDIR`, pokud bude `matplotlib` cache varování při běhu obtěžovat
 - [ ] Zvážit přesun konfigurace rozsahu mapy a názvu výstupu mimo natvrdo zadané konstanty
 - [ ] Zvážit přidání dalších mapových vrstev přes `cartopy` nebo jiný zdroj pobřeží a ostrovů
 - [ ] Rozhodnout, zda na vizuálně podobnou FB animaci stačí OISST, nebo je potřeba jemnější dataset
 - [x] Připravit první variantu workflow nad jemnějším datasetem (např. Copernicus Marine) pro porovnání proti OISST
 - [ ] Ověřit Copernicus workflow nad reálnými denními soubory za březen/duben 2026
+- [x] Ověřit experiment `--region tenerife --month 2026-04` a porovnat vizuál + délku videa proti `canary` výstupu
 - [ ] Zvážit změnu layoutu videa pro Facebook Reel formát
 - [ ] Doladit styling mapy (labely, grid, colormap) pro publikační verzi na Facebook
 
