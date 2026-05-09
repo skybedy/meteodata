@@ -155,58 +155,63 @@ def download_copernicus_file(
 
 def add_map_labels(ax: plt.Axes, africa_label: str) -> None:
     text_effects = [pe.withStroke(linewidth=2.2, foreground="#111111")]
+    extent = ax.get_extent(crs=ccrs.PlateCarree())
+    lon_min, lon_max, lat_min, lat_max = extent
 
     for name, lon, lat, tx, ty in ISLAND_LABELS:
-        ax.annotate(
-            name,
-            xy=(lon, lat),
-            xytext=(tx, ty),
-            xycoords=ccrs.PlateCarree()._as_mpl_transform(ax),
-            textcoords=ccrs.PlateCarree()._as_mpl_transform(ax),
-            fontsize=8.5,
-            color="#f3efe6",
-            weight="semibold",
-            ha="left",
+        # Only draw if the target island coordinates are within the current view
+        if lon_min <= lon <= lon_max and lat_min <= lat <= lat_max:
+            ax.annotate(
+                name,
+                xy=(lon, lat),
+                xytext=(tx, ty),
+                xycoords=ccrs.PlateCarree()._as_mpl_transform(ax),
+                textcoords=ccrs.PlateCarree()._as_mpl_transform(ax),
+                fontsize=8.5,
+                color="#f3efe6",
+                weight="semibold",
+                ha="left",
+                va="center",
+                path_effects=text_effects,
+                arrowprops={
+                    "arrowstyle": "-",
+                    "color": "#1f2933",
+                    "lw": 1.0,
+                    "alpha": 0.95,
+                },
+                zorder=6,
+            )
+
+    if lon_max > -14.0:
+        ax.text(
+            -12.2,
+            26.6,
+            africa_label,
+            transform=ccrs.PlateCarree(),
+            fontsize=14,
+            color="#ffffff",
+            weight="bold",
+            ha="center",
             va="center",
+            alpha=0.95,
             path_effects=text_effects,
-            arrowprops={
-                "arrowstyle": "-",
-                "color": "#1f2933",
-                "lw": 1.0,
-                "alpha": 0.95,
-            },
             zorder=6,
         )
-
-    ax.text(
-        -12.2,
-        26.6,
-        africa_label,
-        transform=ccrs.PlateCarree(),
-        fontsize=14,
-        color="#ffffff",
-        weight="bold",
-        ha="center",
-        va="center",
-        alpha=0.95,
-        path_effects=text_effects,
-        zorder=6,
-    )
 
 
 def add_watermark(ax: plt.Axes, text: str, alpha: float) -> None:
     if not text:
         return
     ax.text(
-        -12.2,
-        24.6,
+        0.98,
+        0.02,
         text,
-        transform=ccrs.PlateCarree(),
+        transform=ax.transAxes,
         fontsize=11.5,
         color="#ffffff",
         weight="semibold",
-        ha="center",
-        va="center",
+        ha="right",
+        va="bottom",
         alpha=alpha,
         path_effects=[pe.withStroke(linewidth=2.0, foreground="#111111")],
         zorder=7,
@@ -241,8 +246,8 @@ def render_frame(
     cmap = plt.get_cmap("RdYlBu_r").copy()
     cmap.set_bad("#303030")
 
-    fig = plt.figure(figsize=(9, 7), dpi=160)
-    ax = plt.axes(projection=ccrs.PlateCarree())
+    fig = plt.figure(figsize=(9, 6), dpi=160)
+    ax = fig.add_axes([0.08, 0.12, 0.78, 0.82], projection=ccrs.PlateCarree())
     ax.set_facecolor("#303030")
     im = ax.pcolormesh(
         lon,
@@ -259,14 +264,16 @@ def render_frame(
         "physical",
         "land",
         "10m",
-        facecolor="#303030",
-        edgecolor="#f5f0e6",
+        edgecolor="face",
+        facecolor="#252525",
     )
     ax.add_feature(land, linewidth=0.55, zorder=3)
     ax.add_feature(cfeature.COASTLINE.with_scale("10m"), linewidth=0.35, edgecolor="#f5f0e6", zorder=4)
     ax.set_title(
         f"Sea Surface Temperature - {region_label} - {day:%Y-%m-%d} - Data: Copernicus Marine",
-        pad=12,
+        pad=10,
+        fontsize=13,
+        weight="semibold",
     )
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
@@ -283,10 +290,12 @@ def render_frame(
         add_map_labels(ax, africa_label)
     add_watermark(ax, watermark_text, watermark_alpha)
 
-    cbar = fig.colorbar(im, ax=ax, extend="both", fraction=0.046, pad=0.04)
+    cbar_ax = fig.add_axes([0.88, 0.15, 0.02, 0.7])
+    cbar = fig.colorbar(im, cax=cbar_ax, extend="both")
     cbar.set_label("Sea surface temperature (°C)")
-    fig.tight_layout()
+    
     fig.savefig(output_path)
+
     plt.close(fig)
 
 
@@ -414,6 +423,11 @@ def main() -> None:
         default=DEFAULT_VMAX,
         help="Maximum temperature for the color scale (°C).",
     )
+    parser.add_argument(
+        "--export-metadata",
+        action="store_true",
+        help="Export metadata.json with date-to-frame mapping in the frames directory.",
+    )
     args = parser.parse_args()
 
     if args.fps <= 0:
@@ -472,6 +486,7 @@ def main() -> None:
             )
 
     rendered = 0
+    metadata_entries = []
     missing: list[Path] = []
     for day in generate_dates(start_date, end_date):
         filename = args.filename_template.format(date=f"{day:%Y%m%d}")
@@ -518,6 +533,7 @@ def main() -> None:
             vmin=args.vmin,
             vmax=args.vmax,
         )
+        metadata_entries.append({"date": day.isoformat(), "frame": frame_path.name})
         rendered += 1
 
     print(f"Rendered frames: {rendered}")
@@ -525,6 +541,14 @@ def main() -> None:
         print("Missing daily files:")
         for path in missing:
             print(f"  - {path}")
+
+    if args.export_metadata and metadata_entries:
+        import json
+
+        metadata_path = frames_dir / "metadata.json"
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump({"region": args.region, "vmin": args.vmin, "vmax": args.vmax, "frames": metadata_entries}, f, indent=2)
+        print(f"Metadata exported: {metadata_path}")
 
     if rendered == 0:
         print("No frames were rendered, skipping MP4 composition.")

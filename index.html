@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenerife SST Explorer - Duben 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --accent-color: #38bdf8;
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+        }
+
+        .viewer-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .image-container {
+            width: 100%;
+            aspect-ratio: 9 / 6;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #sst-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: opacity 0.15s ease-in-out;
+        }
+
+        .controls {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .date-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .current-date {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .stats {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            background: rgba(255,255,255,0.05);
+            padding: 0.4rem 0.8rem;
+            border-radius: 99px;
+        }
+
+        .slider-wrapper {
+            position: relative;
+            padding: 0.5rem 0;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -8px;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+            border: 3px solid #0f172a;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        button.active {
+            background: var(--accent-color);
+            color: #0f172a;
+        }
+
+        .legend-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .color-bar {
+            width: 150px;
+            height: 12px;
+            background: linear-gradient(to right, #00008b, #add8e6, #ffff00, #ff8c00, #8b0000);
+            border-radius: 6px;
+        }
+
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 640px) {
+            .container { padding: 1rem; }
+            header h1 { font-size: 1.8rem; }
+            .viewer-card { border-radius: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Tenerife SST Explorer</h1>
+            <p>Interaktivní vizualizace teploty moře &bull; Duben 2026</p>
+        </header>
+
+        <div class="viewer-card">
+            <div class="image-container">
+                <img id="sst-image" src="" alt="SST Frame">
+            </div>
+
+            <div class="controls">
+                <div class="date-display">
+                    <span class="current-date" id="date-label">Načítání...</span>
+                    <span class="stats" id="stats-label">Snímek 1 / 30</span>
+                </div>
+
+                <div class="slider-wrapper">
+                    <input type="range" id="frame-slider" min="0" max="29" value="0">
+                </div>
+
+                <div class="buttons">
+                    <button id="play-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        Přehrát
+                    </button>
+                    <button id="pause-btn" style="display: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        </svg>
+                        Pozastavit
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend-card">
+            <div class="legend-item">
+                <span>Měřítko:</span>
+                <div class="color-bar"></div>
+            </div>
+            <div class="legend-item">
+                <span id="vmin-label">18 °C</span>
+                <span style="color: var(--text-dim)">|</span>
+                <span id="vmax-label">21 °C</span>
+            </div>
+            <div class="legend-item" style="color: var(--text-dim)">
+                Data: Copernicus Marine
+            </div>
+        </div>
+
+        <footer>
+            &copy; 2026 tene.life &bull; Vytvořeno s Antigravity
+        </footer>
+    </div>
+
+    <script>
+        const METADATA_URL = 'frames/2026_04_tenerife_copernicus/metadata.json';
+        const FRAMES_BASE_DIR = 'frames/2026_04_tenerife_copernicus/';
+        
+        let frames = [];
+        let currentIndex = 0;
+        let isPlaying = false;
+        let playInterval = null;
+
+        const imgElement = document.getElementById('sst-image');
+        const slider = document.getElementById('frame-slider');
+        const dateLabel = document.getElementById('date-label');
+        const statsLabel = document.getElementById('stats-label');
+        const playBtn = document.getElementById('play-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+
+        async function init() {
+            try {
+                const response = await fetch(METADATA_URL);
+                const data = await response.json();
+                frames = data.frames;
+                
+                slider.max = frames.length - 1;
+                document.getElementById('vmin-label').textContent = `${data.vmin} °C`;
+                document.getElementById('vmax-label').textContent = `${data.vmax} °C`;
+                
+                // Preload current image
+                updateFrame(0);
+                
+                // Event listeners
+                slider.addEventListener('input', (e) => {
+                    stopPlayback();
+                    updateFrame(parseInt(e.target.value));
+                });
+
+                playBtn.addEventListener('click', startPlayback);
+                pauseBtn.addEventListener('click', stopPlayback);
+
+            } catch (err) {
+                console.error('Chyba při načítání metadat:', err);
+                dateLabel.textContent = 'Chyba načítání dat';
+            }
+        }
+
+        function updateFrame(index) {
+            currentIndex = index;
+            const frameData = frames[index];
+            
+            // Format date
+            const date = new Date(frameData.date);
+            const formattedDate = date.toLocaleDateString('cs-CZ', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            
+            imgElement.src = FRAMES_BASE_DIR + frameData.frame;
+            dateLabel.textContent = formattedDate;
+            statsLabel.textContent = `Snímek ${index + 1} / ${frames.length}`;
+            slider.value = index;
+        }
+
+        function startPlayback() {
+            if (isPlaying) return;
+            isPlaying = true;
+            playBtn.style.display = 'none';
+            pauseBtn.style.display = 'flex';
+            
+            playInterval = setInterval(() => {
+                let nextIndex = currentIndex + 1;
+                if (nextIndex >= frames.length) {
+                    nextIndex = 0;
+                }
+                updateFrame(nextIndex);
+            }, 300); // 3 FPS
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            clearInterval(playInterval);
+            playBtn.style.display = 'flex';
+            pauseBtn.style.display = 'none';
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
