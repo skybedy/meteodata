@@ -18,9 +18,9 @@ import xarray as xr
 
 REGION_BBOXES: dict[str, tuple[float, float, float, float]] = {
     "canary": (24.0, 32.0, -20.0, -10.0),
-    "tenerife": (27.3, 29.4, -17.7, -15.9),
+    "tenerife": (27.9, 28.7, -16.95, -16.05),
 }
-VMIN, VMAX = 17, 26
+DEFAULT_VMIN, DEFAULT_VMAX = 17, 26
 CARTOPY_DATA_DIR = Path("data/cartopy")
 
 SST_CANDIDATES = ("analysed_sst", "thetao", "sst")
@@ -32,7 +32,7 @@ ISLAND_LABELS = [
     ("La Palma", -17.86, 28.68, -18.85, 29.42),
     ("El Hierro", -17.99, 27.73, -18.95, 27.20),
     ("La Gomera", -17.25, 28.09, -18.95, 28.05),
-    ("Tenerife", -16.57, 28.29, -17.45, 28.95),
+    ("Tenerife", -16.57, 28.29, -16.90, 28.62),
     ("Gran Canaria", -15.60, 27.96, -16.95, 27.35),
     ("Fuerteventura", -14.03, 28.36, -15.25, 29.05),
     ("Lanzarote", -13.64, 29.04, -14.90, 29.85),
@@ -228,6 +228,8 @@ def render_frame(
     africa_label: str,
     watermark_text: str,
     watermark_alpha: float,
+    vmin: float,
+    vmax: float,
 ) -> None:
     sst_subset = open_sst_subset(input_path, lat_min=lat_min, lat_max=lat_max, lon_min=lon_min, lon_max=lon_max)
     sst_filled = fill_nearshore_gaps(sst_subset)
@@ -249,8 +251,8 @@ def render_frame(
         values,
         transform=ccrs.PlateCarree(),
         cmap=cmap,
-        vmin=VMIN,
-        vmax=VMAX,
+        vmin=vmin,
+        vmax=vmax,
         shading="auto",
     )
 
@@ -285,7 +287,7 @@ def render_frame(
     cbar = fig.colorbar(im, ax=ax, extend="both", fraction=0.046, pad=0.04)
     cbar.set_label("Sea surface temperature (°C)")
     fig.tight_layout()
-    fig.savefig(output_path, bbox_inches="tight")
+    fig.savefig(output_path)
     plt.close(fig)
 
 
@@ -401,6 +403,18 @@ def main() -> None:
         default=0.78,
         help="Watermark opacity from 0 to 1.",
     )
+    parser.add_argument(
+        "--vmin",
+        type=float,
+        default=DEFAULT_VMIN,
+        help="Minimum temperature for the color scale (°C).",
+    )
+    parser.add_argument(
+        "--vmax",
+        type=float,
+        default=DEFAULT_VMAX,
+        help="Maximum temperature for the color scale (°C).",
+    )
     args = parser.parse_args()
 
     if args.fps <= 0:
@@ -502,6 +516,8 @@ def main() -> None:
             africa_label=args.africa_label,
             watermark_text=args.watermark_text,
             watermark_alpha=args.watermark_alpha,
+            vmin=args.vmin,
+            vmax=args.vmax,
         )
         rendered += 1
 

@@ -79,3 +79,4 @@ Další zásadní technická rozhodnutí zatím nejsou zaznamenána.
 - Byl přidán základní `README.md` s popisem projektu a návodem k použití skriptů.
 - Byl úspěšně ověřen end-to-end workflow pro region `tenerife` za duben 2026 s automatickým stahováním dat z Copernicu. Výsledek byl uložen do `output/tenerife_sst_2026_04_copernicus.mp4`.
 - Pro spouštění byl použit wrapper `run.sh`, který automaticky přidává vodoznak `https://tene.life`, popisky ostrovů a čistí staré framy.
+- Skript `make_animation_copernicus.py` byl rozšířen o parametry `--vmin` a `--vmax`, které umožňují dynamicky měnit barevnou škálu teploty přímo z příkazové řádky.

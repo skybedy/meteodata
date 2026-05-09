@@ -31,10 +31,16 @@ Pro stahování dat z Copernicu je nutný účet. Přihlašovací údaje nastavt
 - `COPERNICUSMARINE_SERVICE_USERNAME`
 - `COPERNICUSMARINE_SERVICE_PASSWORD`
 
-Příklad vygenerování videa pro Tenerife za duben 2026:
+Příklad vygenerování videa pro Tenerife za duben 2026 s vlastní teplotní škálou:
 ```bash
-python make_animation_copernicus.py --month 2026-04 --region tenerife --download --labels
+./run.sh 2026-04 --region tenerife --vmin 18 --vmax 24
 ```
+
+V tomto příkladu:
+- `2026-04`: Měsíc, který chcete vyrenderovat.
+- `--region tenerife`: Detailní výřez Tenerife (další možnost je `canary`).
+- `--vmin 18`: Spodní hranice teploty na barevné škále (ve stupních Celsia).
+- `--vmax 24`: Horní hranice teploty na barevné škále (ve stupních Celsia).
 
 ### NOAA OISST
 
