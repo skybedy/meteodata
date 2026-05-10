@@ -5,7 +5,7 @@ Tento projekt obsahuje sadu Python skriptů pro vizualizaci teploty mořské hla
 ## Hlavní skripty
 
 - `make_animation.py`: Generuje animace z NOAA OISST dat (rozlišení 0.25°).
-- `make_animation_copernicus.py`: Generuje animace z Copernicus Marine dat (rozlišení 0.083°), podporuje regionální výřezy (např. Tenerife).
+- `make_animation_copernicus.py`: Generuje animace z Copernicus Marine dat (rozlišení 0.083°), podporuje regionální výřezy (např. Tenerife) a web export.
 - `render_oisst.py`: Jednorázový render PNG mapy z NOAA dat.
 
 ## Instalace
@@ -36,11 +36,12 @@ Příklad vygenerování videa pro Tenerife za duben 2026 s vlastní teplotní �
 ./run.sh 2026-04 --region tenerife --vmin 18 --vmax 24
 ```
 
-V tomto příkladu:
-- `2026-04`: Měsíc, který chcete vyrenderovat.
-- `--region tenerife`: Detailní výřez Tenerife (další možnost je `canary`).
-- `--vmin 18`: Spodní hranice teploty na barevné škále (ve stupních Celsia).
-- `--vmax 24`: Horní hranice teploty na barevné škále (ve stupních Celsia).
+Web export (frames + manifest + volitelně video):
+```bash
+./run.sh 2026-04 --region tenerife --web-export
+```
+
+Více detailů: `docs/copernicus-web-export.md`.
 
 ### NOAA OISST
 
@@ -56,3 +57,4 @@ V současnosti jsou podporovány tyto regiony:
 ## Výstupy
 - Framy (jednotlivé dny) se ukládají do složky `frames/`.
 - Výsledná MP4 videa se ukládají do složky `output/`.
+- Při `--web-export` se výstup ukládá do `exports/copernicus/sea-temp/<region>/<YYYY>/<MM>/`.
