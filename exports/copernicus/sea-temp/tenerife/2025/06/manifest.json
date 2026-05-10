@@ -9,6 +9,13 @@
   "dateFrom": "2025-06-01",
   "dateTo": "2025-06-30",
   "unit": "°C",
+  "temperature": {
+    "unit": "°C",
+    "monthlyMin": 20.607,
+    "monthlyMax": 23.598,
+    "scaleMin": 20.0,
+    "scaleMax": 24.0
+  },
   "frameCount": 30,
   "frames": [
     {
@@ -161,5 +168,6 @@
       "file": "2025-06-30.png",
       "label": "30. 6. 2025"
     }
-  ]
+  ],
+  "video": "video.mp4"
 }

@@ -9,6 +9,13 @@
   "dateFrom": "2025-10-01",
   "dateTo": "2025-10-31",
   "unit": "°C",
+  "temperature": {
+    "unit": "°C",
+    "monthlyMin": 22.492,
+    "monthlyMax": 24.902,
+    "scaleMin": 22.0,
+    "scaleMax": 25.5
+  },
   "frameCount": 31,
   "frames": [
     {
@@ -166,5 +173,6 @@
       "file": "2025-10-31.png",
       "label": "31. 10. 2025"
     }
-  ]
+  ],
+  "video": "video.mp4"
 }

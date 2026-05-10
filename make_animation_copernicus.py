@@ -22,6 +22,9 @@ REGION_BBOXES: dict[str, tuple[float, float, float, float]] = {
     "tenerife": (27.9, 28.7, -17.1, -16.0),
 }
 DEFAULT_VMIN, DEFAULT_VMAX = 17, 26
+AUTO_SCALE_MIN_SPAN = 2.0
+AUTO_SCALE_ROUND_STEP = 0.5
+AUTO_SCALE_PADDING = 0.2
 CARTOPY_DATA_DIR = Path("data/cartopy")
 
 SST_CANDIDATES = ("analysed_sst", "thetao", "sst")
@@ -219,6 +222,57 @@ def add_watermark(ax: plt.Axes, text: str, alpha: float) -> None:
     )
 
 
+def calculate_monthly_temperature_stats(
+    daily_files: list[Path],
+    lat_min: float,
+    lat_max: float,
+    lon_min: float,
+    lon_max: float,
+) -> tuple[float, float]:
+    mins: list[float] = []
+    maxs: list[float] = []
+    for daily_file in daily_files:
+        sst_subset = open_sst_subset(daily_file, lat_min=lat_min, lat_max=lat_max, lon_min=lon_min, lon_max=lon_max)
+        values = np.asarray(sst_subset.to_numpy(), dtype=float)
+        if np.all(np.isnan(values)):
+            continue
+        mins.append(float(np.nanmin(values)))
+        maxs.append(float(np.nanmax(values)))
+
+    if not mins or not maxs:
+        raise ValueError("Unable to compute monthly temperature stats: all frames are NaN or missing.")
+
+    return min(mins), max(maxs)
+
+
+def round_down(value: float, step: float) -> float:
+    return np.floor(value / step) * step
+
+
+def round_up(value: float, step: float) -> float:
+    return np.ceil(value / step) * step
+
+
+def build_auto_scale(monthly_min: float, monthly_max: float) -> tuple[float, float]:
+    padded_min = monthly_min - AUTO_SCALE_PADDING
+    padded_max = monthly_max + AUTO_SCALE_PADDING
+
+    scale_min = round_down(padded_min, AUTO_SCALE_ROUND_STEP)
+    scale_max = round_up(padded_max, AUTO_SCALE_ROUND_STEP)
+
+    span = scale_max - scale_min
+    if span < AUTO_SCALE_MIN_SPAN:
+        mid = (scale_min + scale_max) / 2.0
+        half = AUTO_SCALE_MIN_SPAN / 2.0
+        scale_min = round_down(mid - half, AUTO_SCALE_ROUND_STEP)
+        scale_max = round_up(mid + half, AUTO_SCALE_ROUND_STEP)
+
+    if scale_max <= scale_min:
+        scale_max = scale_min + AUTO_SCALE_MIN_SPAN
+
+    return float(scale_min), float(scale_max)
+
+
 def render_frame(
     input_path: Path,
     output_path: Path,
@@ -332,6 +386,7 @@ def write_web_manifest(
     end_date: date,
     frame_files: list[Path],
     include_video: bool,
+    temperature: dict[str, float | str],
 ) -> Path:
     frame_entries = []
     for frame_file in sorted(frame_files):
@@ -355,6 +410,7 @@ def write_web_manifest(
         "dateFrom": start_date.isoformat(),
         "dateTo": end_date.isoformat(),
         "unit": "°C",
+        "temperature": temperature,
         "frameCount": len(frame_entries),
         "frames": frame_entries,
     }
@@ -461,13 +517,13 @@ def main() -> None:
     parser.add_argument(
         "--vmin",
         type=float,
-        default=DEFAULT_VMIN,
+        default=None,
         help="Minimum temperature for the color scale (°C).",
     )
     parser.add_argument(
         "--vmax",
         type=float,
-        default=DEFAULT_VMAX,
+        default=None,
         help="Maximum temperature for the color scale (°C).",
     )
     parser.add_argument(
@@ -559,10 +615,10 @@ def main() -> None:
     rendered = 0
     metadata_entries = []
     missing: list[Path] = []
+    available_daily_files: list[Path] = []
     for day in generate_dates(start_date, end_date):
         filename = args.filename_template.format(date=f"{day:%Y%m%d}")
         daily_file = args.daily_dir / filename
-        frame_path = frames_dir / f"{day:%Y-%m-%d}.{args.image_format}"
 
         if not daily_file.exists():
             if args.download:
@@ -585,6 +641,47 @@ def main() -> None:
             else:
                 missing.append(daily_file)
                 continue
+        available_daily_files.append(daily_file)
+
+    if not available_daily_files:
+        print("No daily files available for rendering.")
+        if missing:
+            print("Missing daily files:")
+            for path in missing:
+                print(f"  - {path}")
+        return
+
+    monthly_min, monthly_max = calculate_monthly_temperature_stats(
+        available_daily_files,
+        lat_min=lat_min,
+        lat_max=lat_max,
+        lon_min=lon_min,
+        lon_max=lon_max,
+    )
+
+    if args.vmin is not None and args.vmax is not None:
+        effective_vmin = float(args.vmin)
+        effective_vmax = float(args.vmax)
+    elif args.vmin is None and args.vmax is None:
+        effective_vmin, effective_vmax = build_auto_scale(monthly_min, monthly_max)
+    else:
+        parser.error("--vmin and --vmax must be provided together, or neither.")
+
+    if effective_vmax <= effective_vmin:
+        parser.error("Color scale requires vmax > vmin.")
+
+    print(
+        "Monthly temperature scale: "
+        f"data min/max={monthly_min:.2f}/{monthly_max:.2f} °C, "
+        f"render scale={effective_vmin:.2f}/{effective_vmax:.2f} °C"
+    )
+
+    for day in generate_dates(start_date, end_date):
+        filename = args.filename_template.format(date=f"{day:%Y%m%d}")
+        daily_file = args.daily_dir / filename
+        frame_path = frames_dir / f"{day:%Y-%m-%d}.{args.image_format}"
+        if not daily_file.exists():
+            continue
 
         print(f"Rendering {day:%Y-%m-%d}: {daily_file}")
         render_frame(
@@ -601,8 +698,8 @@ def main() -> None:
             africa_label=args.africa_label,
             watermark_text=args.watermark_text,
             watermark_alpha=args.watermark_alpha,
-            vmin=args.vmin,
-            vmax=args.vmax,
+            vmin=effective_vmin,
+            vmax=effective_vmax,
         )
         metadata_entries.append({"date": day.isoformat(), "frame": frame_path.name})
         rendered += 1
@@ -618,7 +715,21 @@ def main() -> None:
 
         metadata_path = frames_dir / "metadata.json"
         with open(metadata_path, "w", encoding="utf-8") as f:
-            json.dump({"region": args.region, "vmin": args.vmin, "vmax": args.vmax, "frames": metadata_entries}, f, indent=2)
+            json.dump(
+                {
+                    "region": args.region,
+                    "temperature": {
+                        "unit": "°C",
+                        "monthlyMin": round(monthly_min, 3),
+                        "monthlyMax": round(monthly_max, 3),
+                        "scaleMin": effective_vmin,
+                        "scaleMax": effective_vmax,
+                    },
+                    "frames": metadata_entries,
+                },
+                f,
+                indent=2,
+            )
         print(f"Metadata exported: {metadata_path}")
 
     if rendered == 0:
@@ -635,7 +746,21 @@ def main() -> None:
 
     if export_dir:
         frame_files = [frames_dir / entry["frame"] for entry in metadata_entries]
-        manifest_path = write_web_manifest(export_dir, args.region, start_date, end_date, frame_files, video_created)
+        manifest_path = write_web_manifest(
+            export_dir,
+            args.region,
+            start_date,
+            end_date,
+            frame_files,
+            video_created,
+            {
+                "unit": "°C",
+                "monthlyMin": round(monthly_min, 3),
+                "monthlyMax": round(monthly_max, 3),
+                "scaleMin": effective_vmin,
+                "scaleMax": effective_vmax,
+            },
+        )
         print(f"Web manifest created: {manifest_path}")
 
 

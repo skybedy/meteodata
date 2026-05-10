@@ -9,6 +9,13 @@
   "dateFrom": "2025-01-01",
   "dateTo": "2025-01-31",
   "unit": "°C",
+  "temperature": {
+    "unit": "°C",
+    "monthlyMin": 19.681,
+    "monthlyMax": 21.2,
+    "scaleMin": 19.0,
+    "scaleMax": 21.5
+  },
   "frameCount": 31,
   "frames": [
     {

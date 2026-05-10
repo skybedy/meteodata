@@ -36,6 +36,17 @@ def validate(manifest_path: Path) -> int:
         print(f"Manifest references missing video file: {manifest['video']}")
         return 1
 
+    temperature = manifest.get("temperature")
+    if temperature is not None:
+        required_temperature_keys = ("unit", "monthlyMin", "monthlyMax", "scaleMin", "scaleMax")
+        for key in required_temperature_keys:
+            if key not in temperature:
+                print(f"Temperature block missing key: {key}")
+                return 1
+        if temperature["scaleMax"] <= temperature["scaleMin"]:
+            print("Temperature scaleMax must be greater than scaleMin")
+            return 1
+
     print("Manifest is valid")
     return 0
 

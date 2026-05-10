@@ -8,6 +8,8 @@ Rozšířený skript `make_animation_copernicus.py` umí nově vygenerovat stati
 - `manifest.json` kompatibilní se statickým JS viewerem
 - volitelně `video.mp4`
 
+Součástí manifestu je i blok `temperature` s měsíčním min/max v datech a použitou render škálou (`scaleMin`, `scaleMax`).
+
 ## Spuštění
 
 Příklad pro Tenerife, duben 2026:

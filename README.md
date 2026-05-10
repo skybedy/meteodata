@@ -36,6 +36,8 @@ Příklad vygenerování videa pro Tenerife za duben 2026 s vlastní teplotní �
 ./run.sh 2026-04 --region tenerife --vmin 18 --vmax 24
 ```
 
+Pokud `--vmin/--vmax` nezadáte, skript automaticky spočítá měsíční škálu z dat daného měsíce a použije ji konzistentně pro všechny framy toho měsíce.
+
 Web export (frames + manifest + volitelně video):
 ```bash
 ./run.sh 2026-04 --region tenerife --web-export

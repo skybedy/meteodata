@@ -76,6 +76,10 @@ Další zásadní technická rozhodnutí zatím nejsou zaznamenána.
 
 ## Důležitá technická rozhodnutí
 
+- Copernicus render nově implicitně používá **automatickou měsíční teplotní škálu**: pro celé datumové okno nejdřív spočítá měsíční `monthlyMin/monthlyMax`, následně odvodí stabilní `scaleMin/scaleMax` a stejnou škálu použije pro všechny framy v rámci jednoho měsíce.
+- Ruční override přes `--vmin` + `--vmax` zůstává zachován; argumenty musí být zadány buď oba, nebo žádný.
+- Při web exportu se do `manifest.json` ukládá nový blok `temperature` (`unit`, `monthlyMin`, `monthlyMax`, `scaleMin`, `scaleMax`), aby viewer měl k dispozici přesné informace o použité škále.
+
 - Byl přidán základní `README.md` s popisem projektu a návodem k použití skriptů.
 - Byl úspěšně ověřen end-to-end workflow pro region `tenerife` za duben 2026 s automatickým stahováním dat z Copernicu. Výsledek byl uložen do `output/tenerife_sst_2026_04_copernicus.mp4`.
 - Pro spouštění byl použit wrapper `run.sh`, který automaticky přidává vodoznak `https://tene.life`, popisky ostrovů a čistí staré framy.

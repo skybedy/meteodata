@@ -32,5 +32,6 @@
 - [ ] Otestovat `--speed-factor 2` na dlouhém rozsahu (rok 2025) a ověřit cílovou délku videa.
 
 - [x] Přidat statický web export (frames + manifest + volitelně video) pro Copernicus workflow.
+- [x] Přidat automatickou měsíční teplotní škálu (výpočet z dat + zápis do `manifest.json`).
 - [ ] Přidat volitelný sync script pro kopírování exportu do checkoutu go-tene.life.
 - [ ] Rozšířit manifest title o lokalizované názvy měsíců v češtině.

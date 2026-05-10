@@ -9,6 +9,13 @@
   "dateFrom": "2025-08-01",
   "dateTo": "2025-08-31",
   "unit": "°C",
+  "temperature": {
+    "unit": "°C",
+    "monthlyMin": 21.984,
+    "monthlyMax": 25.426,
+    "scaleMin": 21.5,
+    "scaleMax": 26.0
+  },
   "frameCount": 31,
   "frames": [
     {
@@ -166,5 +173,6 @@
       "file": "2025-08-31.png",
       "label": "31. 8. 2025"
     }
-  ]
+  ],
+  "video": "video.mp4"
 }

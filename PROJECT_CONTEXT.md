@@ -128,3 +128,9 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 - Při web exportu je výstupní struktura připravená pro přímé kopírování do `go-tene.life/public/data/copernicus/...`.
 - Export obsahuje `manifest.json`, denní PNG snímky a volitelný `video.mp4`.
 - Přidán helper `validate_manifest.py` pro validaci `manifest.json` a přítomnosti referencovaných souborů.
+- Barevná škála Copernicus renderu je nově v defaultu **automatická po měsících**:
+  - skript nejprve projde všechna dostupná denní data ve zvoleném období a spočítá `monthlyMin`/`monthlyMax`,
+  - z těchto hodnot určí zaokrouhlenou `scaleMin`/`scaleMax`,
+  - stejná škála se pak používá pro všechny framy daného exportu (konzistentní animace v rámci měsíce).
+- Ruční škála přes `--vmin` a `--vmax` je stále podporována jako override.
+- Web `manifest.json` nově obsahuje blok `temperature` s `unit`, `monthlyMin`, `monthlyMax`, `scaleMin`, `scaleMax`.

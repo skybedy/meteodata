@@ -9,6 +9,13 @@
   "dateFrom": "2025-02-01",
   "dateTo": "2025-02-28",
   "unit": "°C",
+  "temperature": {
+    "unit": "°C",
+    "monthlyMin": 19.574,
+    "monthlyMax": 20.51,
+    "scaleMin": 19.0,
+    "scaleMax": 21.0
+  },
   "frameCount": 28,
   "frames": [
     {
@@ -151,5 +158,6 @@
       "file": "2025-02-28.png",
       "label": "28. 2. 2025"
     }
-  ]
+  ],
+  "video": "video.mp4"
 }
