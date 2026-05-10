@@ -123,3 +123,8 @@ Pokud některé soubory chybí, skript je vypíše a pokračuje; MP4 vytvoří j
 - **Layout 9:6**: Optimalizováno využití plochy, zredukováno bílé místo nahoře.
 - **Interaktivní Demo**: V kořeni projektu je `index.html`, který slouží jako webový prohlížeč pro vyrenderované snímky (vyžaduje metadata.json vygenerované přes `--export-metadata`).
 - **Label Fix**: Popisky se vykreslují jen pro objekty uvnitř mapy.
+
+- `make_animation_copernicus.py` nyní umí web export přes `--web-export`.
+- Při web exportu je výstupní struktura připravená pro přímé kopírování do `go-tene.life/public/data/copernicus/...`.
+- Export obsahuje `manifest.json`, denní PNG snímky a volitelný `video.mp4`.
+- Přidán helper `validate_manifest.py` pro validaci `manifest.json` a přítomnosti referencovaných souborů.

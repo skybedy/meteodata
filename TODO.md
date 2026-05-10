@@ -30,3 +30,7 @@
 - [ ] Zvážit build nebo release workflow, pokud se projekt rozšíří
 
 - [ ] Otestovat `--speed-factor 2` na dlouhém rozsahu (rok 2025) a ověřit cílovou délku videa.
+
+- [x] Přidat statický web export (frames + manifest + volitelně video) pro Copernicus workflow.
+- [ ] Přidat volitelný sync script pro kopírování exportu do checkoutu go-tene.life.
+- [ ] Rozšířit manifest title o lokalizované názvy měsíců v češtině.

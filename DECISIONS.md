@@ -84,3 +84,14 @@ Další zásadní technická rozhodnutí zatím nejsou zaznamenána.
 - Bylo implementováno **filtrování popisků ostrovů**, aby se u velkých přiblížení (např. Tenerife) nevykreslovaly bludné čáry k ostrovům mimo viditelnou oblast.
 - Vodoznak `https://tene.life` byl fixován do pravého dolního rohu obrazovky (nezávisle na souřadnicích), aby byl vždy viditelný.
 - Byl vytvořen interaktivní webový prohlížeč **index.html**, který umožňuje plynulé procházení vygenerovaných snímků pomocí JS.
+
+## Datum
+
+- 2026-05-09
+
+## Důležitá technická rozhodnutí
+
+- Copernicus workflow bylo rozšířeno o přepínač `--web-export`, který ukládá statický balíček pro web do `exports/copernicus/sea-temp/<region>/<YYYY>/<MM>/`.
+- Web export ukládá denní snímky přímo jako `YYYY-MM-DD.png` a vytváří `manifest.json` kompatibilní se statickým viewerem.
+- Stávající MP4 workflow zůstává zachováno; video lze volitelně vypnout přes `--skip-video`.
+- Byl přidán validační helper `validate_manifest.py` pro kontrolu integrity manifestu a souborů.

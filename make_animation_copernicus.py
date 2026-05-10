@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import calendar
+import json
 import os
 import subprocess
 from datetime import date, datetime, timedelta
@@ -308,7 +309,7 @@ def compose_video(frames_dir: Path, output_mp4: Path, fps: int) -> None:
         "-pattern_type",
         "glob",
         "-i",
-        str(frames_dir / "frame_*.png"),
+        str(frames_dir / "*.png"),
         "-vf",
         "pad=ceil(iw/2)*2:ceil(ih/2)*2",
         "-c:v",
@@ -318,6 +319,52 @@ def compose_video(frames_dir: Path, output_mp4: Path, fps: int) -> None:
         str(output_mp4),
     ]
     subprocess.run(cmd, check=True)
+
+
+def build_cs_label(day: date) -> str:
+    return f"{day.day}. {day.month}. {day.year}"
+
+
+def write_web_manifest(
+    export_dir: Path,
+    region: str,
+    start_date: date,
+    end_date: date,
+    frame_files: list[Path],
+    include_video: bool,
+) -> Path:
+    frame_entries = []
+    for frame_file in sorted(frame_files):
+        frame_day = date.fromisoformat(frame_file.stem)
+        frame_entries.append(
+            {
+                "date": frame_day.isoformat(),
+                "file": frame_file.name,
+                "label": build_cs_label(frame_day),
+            }
+        )
+
+    manifest = {
+        "id": f"{region}-sea-temp-{start_date:%Y-%m}",
+        "title": f"Vývoj teploty moře kolem Tenerife – {start_date:%m/%Y}",
+        "type": "sea_surface_temperature",
+        "source": "Copernicus",
+        "area": "Tenerife / Canary Islands",
+        "year": start_date.year,
+        "month": start_date.month,
+        "dateFrom": start_date.isoformat(),
+        "dateTo": end_date.isoformat(),
+        "unit": "°C",
+        "frameCount": len(frame_entries),
+        "frames": frame_entries,
+    }
+    if include_video:
+        manifest["video"] = "video.mp4"
+
+    manifest_path = export_dir / "manifest.json"
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+    return manifest_path
 
 
 def main() -> None:
@@ -428,6 +475,24 @@ def main() -> None:
         action="store_true",
         help="Export metadata.json with date-to-frame mapping in the frames directory.",
     )
+    parser.add_argument(
+        "--web-export",
+        action="store_true",
+        help="Create web export directory with dated image files and manifest.json.",
+    )
+    parser.add_argument(
+        "--web-export-root",
+        type=Path,
+        default=Path("exports/copernicus/sea-temp"),
+        help="Base directory for web export outputs.",
+    )
+    parser.add_argument(
+        "--image-format",
+        choices=["png"],
+        default="png",
+        help="Image format used for exported daily frames.",
+    )
+    parser.add_argument("--skip-video", action="store_true", help="Render frames only, do not compose MP4.")
     args = parser.parse_args()
 
     if args.fps <= 0:
@@ -462,6 +527,12 @@ def main() -> None:
     output_mp4 = args.output_mp4 or default_output_mp4
     lat_min, lat_max, lon_min, lon_max = REGION_BBOXES[args.region]
 
+    export_dir: Path | None = None
+    if args.web_export:
+        export_dir = args.web_export_root / args.region / f"{start_date:%Y}" / f"{start_date:%m}"
+        frames_dir = export_dir
+        output_mp4 = export_dir / "video.mp4"
+
     frames_dir.mkdir(parents=True, exist_ok=True)
     output_mp4.parent.mkdir(parents=True, exist_ok=True)
     CARTOPY_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -491,7 +562,7 @@ def main() -> None:
     for day in generate_dates(start_date, end_date):
         filename = args.filename_template.format(date=f"{day:%Y%m%d}")
         daily_file = args.daily_dir / filename
-        frame_path = frames_dir / f"frame_{day:%Y-%m-%d}.png"
+        frame_path = frames_dir / f"{day:%Y-%m-%d}.{args.image_format}"
 
         if not daily_file.exists():
             if args.download:
@@ -554,10 +625,18 @@ def main() -> None:
         print("No frames were rendered, skipping MP4 composition.")
         return
 
-    effective_fps = max(1, int(round(args.fps * args.speed_factor)))
-    print(f"Composing MP4 at {effective_fps} fps (base {args.fps} * speed-factor {args.speed_factor}).")
-    compose_video(frames_dir, output_mp4, effective_fps)
-    print(f"Animation created: {output_mp4}")
+    video_created = False
+    if not args.skip_video:
+        effective_fps = max(1, int(round(args.fps * args.speed_factor)))
+        print(f"Composing MP4 at {effective_fps} fps (base {args.fps} * speed-factor {args.speed_factor}).")
+        compose_video(frames_dir, output_mp4, effective_fps)
+        print(f"Animation created: {output_mp4}")
+        video_created = True
+
+    if export_dir:
+        frame_files = [frames_dir / entry["frame"] for entry in metadata_entries]
+        manifest_path = write_web_manifest(export_dir, args.region, start_date, end_date, frame_files, video_created)
+        print(f"Web manifest created: {manifest_path}")
 
 
 if __name__ == "__main__":
